@@ -1,3 +1,12 @@
+# the global configuration allows you to turn on specific features
+global:
+  machine: true
+  netviz: true
+  loaders: true
+  services: true
+  chaos: false
+  dbmon: true
+  
 #Simulated insurance application, will register the BTs listed under the Web-frontend tier. 
 #Note - some additional BTs will register during the first few runs, you should view # of calls and exclude accordingly.
 #Performance Issue 1 - 500 Error on /homepage BT will happen 10% of the time
@@ -6,11 +15,8 @@
 #TIP - You can run two versions of the script, upping the load and issues for one
 apm:
   applicationName: AD-Insurance
-  controller: 
-  accountName: 
-  accountAccessKey: 
-  eventsService: 
-  globalAccountName: 
+  eum:
+    appKey: AD-AAB-ABE-THR
 
 services:
   web-frontend:
@@ -137,8 +143,8 @@ services:
 loaders:
   browser:
     type: puppeteer
-    wait: 15
-    count: 5
+    wait: 60
+    count: 2
     urls:
       - http://web-frontend/login
       - http://web-frontend/homepage

@@ -7,6 +7,15 @@ const shellescape = require('shell-escape')
 const chalk = require('chalk')
 const merge = require('lodash.merge')
 
+// 3:  IMAGE_PREFIX
+// 4:  DOCKER_NETWORK
+// 5:  DOCKER_LOGS_VOLUME
+// 6:  CONTAINER_PREFIX
+// 7:  CUSTOM_CODE_DIR
+// 8:  NETWORK_DETAILS
+// 10: VERBOSITY
+// 11: DOCKER_PHP_PROXY_VOLUME
+
 const imagePrefix = process.argv[3]
 const dockerNetwork = process.argv[4]
 const dockerLogsVolume = process.argv[5]
@@ -296,7 +305,9 @@ try {
       '-e', `APPDYNAMICS_AGENT_ACCOUNT_NAME=${apm.accountName}`,
       '-e', `APPDYNAMICS_AGENT_ACCOUNT_ACCESS_KEY=${apm.accountAccessKey}`,
       '-e', `APPDYNAMICS_ANALYTICS_AGENT_NAME=${imagePrefix}-${containerPrefix}-analytics-agent`,
-      '-e', 'MACHINE_AGENT_PROPERTIES=-Dappdynamics.sim.enabled=true -Dappdynamics.docker.enabled=true',
+      // '-e', 'MACHINE_AGENT_PROPERTIES=-Dappdynamics.sim.enabled=true -Dappdynamics.docker.enabled=true',
+      '-e', 'APPDYNAMICS_SIM_ENABLED=true',
+      '-e', 'APPDYNAMICS_DOCKER_ENABLED=true',
       '-e', `APPDYNAMICS_MACHINE_HIERARCHY_PATH=${imagePrefix}|${containerPrefix}|machine-agent`,
       '-v', '/:/hostroot:ro',
       '-v', '/var/run/docker.sock:/var/run/docker.sock',
@@ -312,14 +323,18 @@ try {
     ]
     if (apm.eventsService && apm.globalAccountName) {
       machineAgentCmd.push('-e', 'WITH_ANALYTICS=1')
-      machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_CONTROLLER=${apm.controller}`)
+      // machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_CONTROLLER=${apm.controller}`)
       machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_EVENTS_SERVICE=${apm.eventsService}`)
-      machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_ACCOUNT_NAME=${apm.accountName}`)
+      // machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_ACCOUNT_NAME=${apm.accountName}`)
       machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_GLOBAL_ACCOUNT_NAME=${apm.globalAccountName}`)
-      machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_ACCESS_KEY=${apm.accountAccessKey}`)
+      // machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_ACCESS_KEY=${apm.accountAccessKey}`)
     } else {
       machineAgentCmd.push('-e', 'WITH_ANALYTICS=0')
     }
+
+    if (global.netviz) {
+    }
+
     machineAgentCmd.push(imagePrefix + '/machine')
 
     runCmd(shellescape(machineAgentCmd), chalk.green('[infrastructure] starting machine agent'))

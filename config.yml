@@ -4,14 +4,14 @@ global:
   netviz: true
   loaders: true
   services: true
-  chaos: true
-  dbmon: true
+  chaos: false
+  dbmon: false
 
 # apm settings are merged with your default settings.
 apm:
-  applicationName: my_apm_game
+  applicationName: apm-game
   eum:
-    appKey: EC-AAB-FTU
+    appKey: AD-AAB-ABE-TJX
 
 services:
   frontend:
@@ -154,7 +154,7 @@ services:
 loaders:
   browser:
     type: puppeteer
-    wait: 15
+    wait: 60
     count: 2
     urls:
       - http://www.ecommer.ce/addtocart

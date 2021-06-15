@@ -1,19 +1,17 @@
 # Simulated API GW wiht uServices 
-#
-# config.yml
+# the global configuration allows you to turn on specific features
+global:
+  machine: true
+  netviz: true
+  loaders: true
+  services: true
+  chaos: false
+  dbmon: false
+
 apm:
-  applicationName: ** ADD yours here **
-  controller:  ** ADD yours here **
-  accountName: ** ADD yours here **
-  accountAccessKey: ** ADD yours here **
-  eventsService: ** ADD yours here **
-  globalAccountName: ** ADD yours here **
+  applicationName: API-Gateway
   eum:
-    appKey: ** ADD yours here **
-    adrumExtUrlHttp: http://cdn.appdynamics.com
-    adrumExtUrlHttps: https://cdn.appdynamics.com
-    beaconUrlHttp: ** ADD yours here **
-    beaconUrlHttps: ** ADD yours here **
+    appKey: AD-AAB-ABE-TDB
         
 services:
   apigw:
@@ -156,7 +154,7 @@ services:
 loaders:
   browser:
     type: puppeteer
-    wait: 120
+    wait: 60
     count: 1
     urls:
       - http://apigw/login

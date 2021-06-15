@@ -1,16 +1,17 @@
+# the global configuration allows you to turn on specific features
+global:
+  machine: true
+  netviz: true
+  loaders: true
+  services: true
+  chaos: false
+  dbmon: false
+
+# apm settings are merged with your default settings.
 apm:
-  controller: http://localhost:8090
-  accountName: customer1
-  accountAccessKey:
-  applicationName: AD-Simple
-  eventsService: http://localhost:9080
-  globalAccountName:
+  applicationName: AD-Betting
   eum:
-    appKey:
-    adrumExtUrlHttp: http://cdn.appdynamics.com
-    adrumExtUrlHttps: https://cdn.appdynamics.com
-    beaconUrlHttp: http://col.eum-appdynamics.com
-    beaconUrlHttps: https://col.eum-appdynamics.com
+    appKey: AD-AAB-ABE-TUY
 
 services:
   frontend:
@@ -136,7 +137,7 @@ services:
 loaders:
   browser:
     type: phantomjs
-    wait: 15
+    wait: 30
     count: 3
     adrumTimeout: 5
     urls:

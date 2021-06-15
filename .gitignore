@@ -4,3 +4,5 @@ package-lock.json
 nodes/*/node.log
 defaults.yml
 defaults-*.yml
+.DS_Store
+*.zip

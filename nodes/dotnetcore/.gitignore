@@ -36,4 +36,4 @@ msbuild.wrn
 # Visual Studio 2015
 .vs/
 
-AppDynamics-DotNetCore-linux-x64-20*
+AppDynamics-DotNetCore-linux-x64-*

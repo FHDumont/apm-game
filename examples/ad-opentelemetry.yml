@@ -10,6 +10,8 @@ global:
 
 apm:
   applicationName: AD-Virus-Scanner-App
+  eum:
+    appKey: AD-AAB-ABE-TKS
 
 services:
   frontend:
@@ -95,7 +97,6 @@ services:
           - call: error,500,Scan failed
             probability: 0.1
           - sleep,500
-
 
 loaders:
   browser:
