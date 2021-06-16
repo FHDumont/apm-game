@@ -32,6 +32,8 @@ replaceText 'http.event.accountName=analytics-customer1' "http.event.accountName
 
 replaceText 'http.event.accessKey=your-account-access-key' "http.event.accessKey=${APPDYNAMICS_AGENT_ACCOUNT_ACCESS_KEY}" $ANALYTICS_AGENT_PROPERTIES
 
+replaceText 'appdynamics.agent.uniqueHostId=' "appdynamics.agent.uniqueHostId=${APPDYNAMICS_ANALYTICS_HOSTNAME}" $ANALYTICS_AGENT_PROPERTIES
+
 if [ "x${APPDYNAMICS_AGENT_PROXY_HOST}" != "x" ]; then
     replaceText 'http.event.proxyHost=' "http.event.proxyHost=${APPDYNAMICS_AGENT_PROXY_HOST}" $ANALYTICS_AGENT_PROPERTIES
 fi

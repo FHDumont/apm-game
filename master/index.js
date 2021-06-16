@@ -15,12 +15,14 @@ const merge = require('lodash.merge')
 // 8:  NETWORK_DETAILS
 // 10: VERBOSITY
 // 11: DOCKER_PHP_PROXY_VOLUME
+// 12: HOSTNAME
 
 const imagePrefix = process.argv[3]
 const dockerNetwork = process.argv[4]
 const dockerLogsVolume = process.argv[5]
 const dockerPhpProxyVolume = process.argv[11]
 const containerPrefix = process.argv[6]
+const hostname = process.argv[12]
 
 var localCustomCodeDir = process.argv[7]
 
@@ -91,6 +93,73 @@ try {
   }
   const controller = url.parse(apm.controller)
 
+  if (global.machine) {
+    var machineAgentName = `${containerPrefix}-machine-agent`
+    var machineAgentCmd = ['docker', 'run',
+      '-e', `APPDYNAMICS_CONTROLLER_HOST_NAME=${controller.hostname}`,
+      '-e', `APPDYNAMICS_CONTROLLER_PORT=${controller.port}`,
+      '-e', `APPDYNAMICS_CONTROLLER_SSL_ENABLED=${controller.protocol.startsWith('https')}`,
+      '-e', `APPDYNAMICS_AGENT_ACCOUNT_NAME=${apm.accountName}`,
+      '-e', `APPDYNAMICS_AGENT_ACCOUNT_ACCESS_KEY=${apm.accountAccessKey}`,
+      '-e', `APPDYNAMICS_ANALYTICS_AGENT_NAME=${imagePrefix}-${containerPrefix}-analytics-agent`,
+      // '-e', 'MACHINE_AGENT_PROPERTIES=-Dappdynamics.sim.enabled=true -Dappdynamics.docker.enabled=true',
+      '-e', 'APPDYNAMICS_SIM_ENABLED=true',
+      '-e', 'APPDYNAMICS_DOCKER_ENABLED=true',
+      '-e', 'APPDYNAMICS_AGENT_ENABLE_CONTAINERIDASHOSTID=true',
+      '-e', `APPDYNAMICS_MACHINE_HIERARCHY_PATH=${imagePrefix}|${containerPrefix}|machine-agent`,
+      '-v', '/:/hostroot:ro',
+      '-v', '/var/run/docker.sock:/var/run/docker.sock',
+      '-v', '/var/lib/docker/containers/:/var/lib/docker/containers/',
+      '-v', `${dockerLogsVolume}:/logs`,
+      '--log-opt', 'labels=container-type',
+      '--label', 'container-type=machine-agent',
+      '--rm',
+      '--network', dockerNetwork,
+      '--name', machineAgentName,
+      '--network-alias=machine-agent',
+      '--network-alias=analytics'
+    ]
+    if (apm.eventsService && apm.globalAccountName) {
+      machineAgentCmd.push('-e', 'WITH_ANALYTICS=1')
+      // machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_CONTROLLER=${apm.controller}`)
+      machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_EVENTS_SERVICE=${apm.eventsService}`)
+      // machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_ACCOUNT_NAME=${apm.accountName}`)
+      machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_GLOBAL_ACCOUNT_NAME=${apm.globalAccountName}`)
+      machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_HOSTNAME=${hostname}`)
+      // machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_ACCESS_KEY=${apm.accountAccessKey}`)
+    } else {
+      machineAgentCmd.push('-e', 'WITH_ANALYTICS=0')
+    }
+
+    if (global.netviz) {
+    }
+
+    machineAgentCmd.push(imagePrefix + '/machine')
+
+    runCmd(shellescape(machineAgentCmd), chalk.green('[infrastructure] starting machine agent'))
+    containers.push(machineAgentName)
+  } else {
+    console.log(chalk.yellow('[infrastructure] skipping machine agent.'))
+  }
+
+  if (global.netviz) {
+    var netvizAgentName = `${containerPrefix}-netviz-agent`
+    var netvizAgentCmd = ['docker', 'run',
+      '--rm',
+      '--network=host',
+      '--cap-add=NET_ADMIN',
+      '--cap-add=NET_RAW',
+      '--name', netvizAgentName,
+      '-v', `${dockerLogsVolume}:/logs`,
+      imagePrefix + '/netviz'
+    ]
+
+    runCmd(shellescape(netvizAgentCmd), chalk.green('[infrastructure] starting network visibility agent'))
+    containers.push(netvizAgentName)
+  } else {
+    console.log(chalk.yellow('[infrastructure] skipping network visibility agent.'))
+  }
+    
   if (global.services) {
     Object.keys(services).forEach(function (name) {
       const service = services[name]
@@ -296,71 +365,6 @@ try {
     containers.push(otelCollectorName)
   }
 
-  if (global.machine) {
-    var machineAgentName = `${containerPrefix}-machine-agent`
-    var machineAgentCmd = ['docker', 'run',
-      '-e', `APPDYNAMICS_CONTROLLER_HOST_NAME=${controller.hostname}`,
-      '-e', `APPDYNAMICS_CONTROLLER_PORT=${controller.port}`,
-      '-e', `APPDYNAMICS_CONTROLLER_SSL_ENABLED=${controller.protocol.startsWith('https')}`,
-      '-e', `APPDYNAMICS_AGENT_ACCOUNT_NAME=${apm.accountName}`,
-      '-e', `APPDYNAMICS_AGENT_ACCOUNT_ACCESS_KEY=${apm.accountAccessKey}`,
-      '-e', `APPDYNAMICS_ANALYTICS_AGENT_NAME=${imagePrefix}-${containerPrefix}-analytics-agent`,
-      // '-e', 'MACHINE_AGENT_PROPERTIES=-Dappdynamics.sim.enabled=true -Dappdynamics.docker.enabled=true',
-      '-e', 'APPDYNAMICS_SIM_ENABLED=true',
-      '-e', 'APPDYNAMICS_DOCKER_ENABLED=true',
-      '-e', `APPDYNAMICS_MACHINE_HIERARCHY_PATH=${imagePrefix}|${containerPrefix}|machine-agent`,
-      '-v', '/:/hostroot:ro',
-      '-v', '/var/run/docker.sock:/var/run/docker.sock',
-      '-v', '/var/lib/docker/containers/:/var/lib/docker/containers/',
-      '-v', `${dockerLogsVolume}:/logs`,
-      '--log-opt', 'labels=container-type',
-      '--label', 'container-type=machine-agent',
-      '--rm',
-      '--network', dockerNetwork,
-      '--name', machineAgentName,
-      '--network-alias=machine-agent',
-      '--network-alias=analytics'
-    ]
-    if (apm.eventsService && apm.globalAccountName) {
-      machineAgentCmd.push('-e', 'WITH_ANALYTICS=1')
-      // machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_CONTROLLER=${apm.controller}`)
-      machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_EVENTS_SERVICE=${apm.eventsService}`)
-      // machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_ACCOUNT_NAME=${apm.accountName}`)
-      machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_GLOBAL_ACCOUNT_NAME=${apm.globalAccountName}`)
-      // machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_ACCESS_KEY=${apm.accountAccessKey}`)
-    } else {
-      machineAgentCmd.push('-e', 'WITH_ANALYTICS=0')
-    }
-
-    if (global.netviz) {
-    }
-
-    machineAgentCmd.push(imagePrefix + '/machine')
-
-    runCmd(shellescape(machineAgentCmd), chalk.green('[infrastructure] starting machine agent'))
-    containers.push(machineAgentName)
-  } else {
-    console.log(chalk.yellow('[infrastructure] skipping machine agent.'))
-  }
-
-  if (global.netviz) {
-    var netvizAgentName = `${containerPrefix}-netviz-agent`
-    var netvizAgentCmd = ['docker', 'run',
-      '--rm',
-      '--network=host',
-      '--cap-add=NET_ADMIN',
-      '--cap-add=NET_RAW',
-      '--name', netvizAgentName,
-      '-v', `${dockerLogsVolume}:/logs`,
-      imagePrefix + '/netviz'
-    ]
-
-    runCmd(shellescape(netvizAgentCmd), chalk.green('[infrastructure] starting network visibility agent'))
-    containers.push(netvizAgentName)
-  } else {
-    console.log(chalk.yellow('[infrastructure] skipping network visibility agent.'))
-  }
-
   if (global.dbmon) {
     var databaseAgentName = `${containerPrefix}-database-agent`
     var databaseAgentCmd = ['docker', 'run',
@@ -369,7 +373,8 @@ try {
       '-e', `APPDYNAMICS_CONTROLLER_SSL_ENABLED=${controller.protocol.startsWith('https')}`,
       '-e', `APPDYNAMICS_AGENT_ACCOUNT_NAME=${apm.accountName}`,
       '-e', `APPDYNAMICS_AGENT_ACCOUNT_ACCESS_KEY=${apm.accountAccessKey}`,
-      '-e', `APPDYNAMICS_DATABASE_AGENT_NAME=${imagePrefix}-${containerPrefix}-database-agent`,
+      // '-e', `APPDYNAMICS_DATABASE_AGENT_NAME=${imagePrefix}-${containerPrefix}-database-agent`,
+      '-e', `APPDYNAMICS_DATABASE_AGENT_NAME=${imagePrefix}-database-agent`,
       '--label', 'container-type=database-agent',
       '--rm',
       '--network', dockerNetwork,
