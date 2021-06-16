@@ -54,7 +54,7 @@ DOCKER_LOGS_VOLUME="${CONTAINER_PREFIX}-logs"
 DOCKER_PHP_PROXY_VOLUME="${CONTAINER_PREFIX}-php-proxy"
 
 IS_RUNNING=`docker ps -f name=${CONTAINER_PREFIX} -q`
-HOSTNAME=`hostname`
+HOSTNAME=`docker info | grep "Name:" |  cut -d ':' -f2 | xargs`
 
 if [ -n "${IS_RUNNING}" ]
 then

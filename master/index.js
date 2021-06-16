@@ -106,7 +106,8 @@ try {
       '-e', 'APPDYNAMICS_SIM_ENABLED=true',
       '-e', 'APPDYNAMICS_DOCKER_ENABLED=true',
       '-e', 'APPDYNAMICS_AGENT_ENABLE_CONTAINERIDASHOSTID=true',
-      '-e', `APPDYNAMICS_MACHINE_HIERARCHY_PATH=${imagePrefix}|${containerPrefix}|machine-agent`,
+      // '-e', `APPDYNAMICS_MACHINE_HIERARCHY_PATH=${imagePrefix}|${containerPrefix}|machine-agent`,
+      '-e', `APPDYNAMICS_MACHINE_HIERARCHY_PATH=${imagePrefix}|${containerPrefix}|${hostname}`,
       '-v', '/:/hostroot:ro',
       '-v', '/var/run/docker.sock:/var/run/docker.sock',
       '-v', '/var/lib/docker/containers/:/var/lib/docker/containers/',
@@ -129,9 +130,6 @@ try {
       // machineAgentCmd.push('-e', `APPDYNAMICS_ANALYTICS_ACCESS_KEY=${apm.accountAccessKey}`)
     } else {
       machineAgentCmd.push('-e', 'WITH_ANALYTICS=0')
-    }
-
-    if (global.netviz) {
     }
 
     machineAgentCmd.push(imagePrefix + '/machine')
