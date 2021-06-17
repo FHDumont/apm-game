@@ -39,7 +39,6 @@ private static IMetricAndEventReporter metricAndEventReporter;
 
 private static final Logger logger = LoggerFactory.getLogger(JavaNode.class);
 
-
 private static HashSet<DataScope> allScopes;
 
 public static void main(String[] args) throws Exception {
@@ -88,9 +87,9 @@ public static void main(String[] args) throws Exception {
 @SuppressWarnings("serial")
 public static class NodeServlet extends HttpServlet {
 
-protected static JsonObject config;
-protected static JsonObject apmConfig;
-protected static JsonObject endpoints;
+        protected static JsonObject config;
+        protected static JsonObject apmConfig;
+        protected static JsonObject endpoints;
 
         public static void setConfig(JsonObject config, JsonObject apmConfig) {
                 NodeServlet.config = config;
@@ -140,7 +139,7 @@ protected static JsonObject endpoints;
 
         protected String queryDatabase(String call, boolean catchExceptions, int remoteTimeout) throws IOException {
                 try {
-                        String url = "jdbc:my" + call.split("\\?")[0] + "?useSSL=false";
+                        String url = "jdbc:my" + call.split("\\?")[0] + "?useSSL=false&allowMultiQueries=true";
                         Connection connection = DriverManager.getConnection(url, "root", "root");
 
                         PreparedStatement stmt = connection.prepareStatement(call.split("\\?query=")[1]);

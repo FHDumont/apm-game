@@ -130,7 +130,6 @@ if (isNaN(port)) {
   port = 3000
 }
 
-
 function buildResponse(timeout) {
   const start = process.hrtime()
   var elapsed = process.hrtime(start)

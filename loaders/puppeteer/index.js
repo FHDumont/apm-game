@@ -77,7 +77,6 @@ function run() {
         var searchParams = myUrl.searchParams
         searchParams.append('unique_session_id', uniqueId)
         myUrl.search = searchParams
-        console.log('  => Visiting', myUrl.href)
         try {
           if ( location != undefined ) {
             searchParams.append('city', location['city'])
@@ -86,6 +85,7 @@ function run() {
             myUrl.search = searchParams
           }
   
+          console.log('  => Visiting', myUrl.href)
           await page.goto(myUrl, { waitUntil: 'networkidle0' })
           if ( appKey != undefined ) {
             console.log('  => Waiting ADRUM Response')
