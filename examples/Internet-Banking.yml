@@ -1,14 +1,15 @@
 # Colocar sizing nas imagens
 # Colocar sizing nos scripts
+# Colocar array no loader, para sortear qual URL executar, assim fica dinâmico e com journey map diferente
 
 # the global configuration allows you to turn on specific features
 global:
   machine: true
-  netviz: false
+  netviz: true
   loaders: true
   services: true
-  chaos: true
-  dbmon: false
+  chaos: false
+  dbmon: true
 
 apm:
   applicationName: Internet-Banking
@@ -27,27 +28,217 @@ services:
         /home:
           - log,info,Home
           - http://auth.appd/check-session
-          # - image,http://cdn.cloud/logo.png
-          # - image,http://cdn.cloud/banner.png
-          # - script,http://google.com/ga.js
-          # - ajax,http://external.service.cloud/quote/dollar
-          # - ajax,http://internal.service.cloud/checkversion.js
+          - image,http://cdn.cloud/logo.png
+          - image,http://cdn.cloud/banner.png
+          - script,http://google.com/ga.js
+          - ajax,http://external.service.cloud/quote/dollar
+          - ajax,http://internal.service.cloud/checkversion.js
+        /login:
+          - log,info,Login
+          - http://auth.appd/login
+        /logout:
+          - log,info,Logout
+          - http://auth.appd/logout
+        /conta-corrente/saldo:
+          - log,info,conta-corrent/saldo
+          - http://conta-corrente.appd/saldo
+          - image,http://cdn.cloud/logo.png
+          - ajax,http://external.service.cloud/quote/dollar
+        /conta-corrente/extrato:
+          - log,info,conta-corrent/extrato
+          - http://conta-corrente.appd/extrato
+          - image,http://cdn.cloud/banner.png
+          - script,http://google.com/ga.js
+        /conta-corrente/fazer-transferencia:
+          - log,info,conta-corrent/saldo
+          - http://conta-corrente.appd/saldo
+          - image,http://cdn.cloud/logo.png
+          - ajax,http://external.service.cloud/quote/dollar
+        /conta-corrente/listar-boleto-dda:
+          - log,info,conta-corrent/extrato
+          - http://conta-corrente.appd/extrato
+          - image,http://cdn.cloud/banner.png
+          - script,http://google.com/ga.js
+        /conta-corrente/pagar-boleto:
+          - log,info,conta-corrent/saldo
+          - http://conta-corrente.appd/saldo
+          - image,http://cdn.cloud/logo.png
+          - ajax,http://external.service.cloud/quote/dollar
+        /pix/minhas-chaves:
+          - log,info,pix/minhaschaves
+          - http://pix.appd/minhas-chaves
+          - image,http://cdn.cloud/logo.png
+          - ajax,http://internal.service.cloud/checkversion.js
+        /pix/extrato:
+          - log,info,pix/extrato
+          - http://pix.appd/extrato
+          - image,http://cdn.cloud/logo.png
+        /pix/transferir:
+          - log,info,pix/transferir
+          - http://pix.appd/transferir
+          - image,http://cdn.cloud/logo.png
+        /pix/pagar-qr-code:
+          - log,info,pix/pagar-qr-code
+          - http://pix.appd/pagar-qr-code
+          - image,http://cdn.cloud/logo.png
+          - ajax,http://internal.service.cloud/checkversion.js
+        /pix/gerar-qr-code:
+          - log,info,pix/gerar-qr-code
+          - http://pix.appd/gerar-qr-code
+          - image,http://internal.service.cloud/qr-code.png
+          - image,http://cdn.cloud/logo.png
+        /cartao/listar:
+          - log,info,cartao/listar
+          - http://cartao.appd/listar
+          - image,http://cdn.cloud/logo.png
+          - ajax,http://internal.service.cloud/checkversion.js
+        /cartao/extrato:
+          - log,info,cartao/extrato
+          - http://cartao.appd/extrato
+          - image,http://cdn.cloud/logo.png
+        /cartao/cartao-virtual:
+          - log,info,cartao/cartao-virtual
+          - http://cartao.appd/cartao-virtual
+          - image,http://cdn.cloud/logo.png
+        /cartao/pagar:
+          - log,info,cartao/pagar
+          - http://cartao.appd/pagar
+          - image,http://cdn.cloud/logo.png
+          - ajax,http://internal.service.cloud/checkversion.js
+        /emprestimo/listar:
+          - log,info,emprestimo/listar
+          - http://emprestimo.appd/listar
+          - image,http://cdn.cloud/logo.png
+          - image,http://cdn.cloud/banner.png
+          - script,http://google.com/ga.js
+          - ajax,http://external.service.cloud/quote/dollar
+          - ajax,http://internal.service.cloud/checkversion.js
+        /emprestimo/pedir:
+          - log,info,emprestimo/pedir
+          - http://emprestimo.appd/pedir
+          - image,http://cdn.cloud/logo.png
+          - ajax,http://external.service.cloud/quote/dollar
+        /emprestimo/pagar:
+          - log,info,emprestimo/pagar
+          - http://emprestimo.appd/pagar
+          - image,http://cdn.cloud/banner.png
+          - script,http://google.com/ga.js
 
   auth:
-    type: java
+    type: nodejs
     agent: yes
     aliases:
       - auth.appd
     endpoints:
       http:
         /check-session:
-          - call: sql://backend-db/internetbanking?query=SELECT * FROM users WHERE id = 1
-            remoteTimeout: 1
-          # - slow,512
-          - call: slow,2048
+          - call: sleep,512
+          - call: sleep,2048
             probability: 0.50
-          # - call: error,500,Session Expired
-          #   probability: 0.10
+        /login:
+          - http://ldap.service.appd/authenticate
+          - http://internal.service.cloud/authenticate/save
+          - slow,128
+        /logout:
+          - slow,128
+          - call: sleep,1024
+            probability: 0.50
+
+  conta-corrente:
+    type: java
+    agent: yes
+    aliases:
+      - conta-corrente.appd
+    endpoints:
+      http:
+        /extrato:
+          - sleep,128
+          - call: sleep,512
+            probability: 0.4
+          - sql://backend-db/internetbanking?query=SELECT * FROM (SELECT SLEEP(0.600)) AS SLEEP, statement
+        /saldo:
+          - sleep,128
+          - call: sleep,256
+            probability: 0.2
+          - sql://backend-db/internetbanking?query=SELECT * FROM (SELECT SLEEP(0.350)) AS SLEEP, statement
+        /fazer-transferencia:
+          - http://financeiro.appd/conta-corrente/fazer-transferencia
+        /listar-boleto-dda:
+          - sleep,128
+          - call: sleep,256
+            probability: 0.2
+          - sql://backend-db/internetbanking?query=SELECT * FROM (SELECT SLEEP(0.350)) AS SLEEP, statement
+          - sleep,128
+        /pagar-boleto:
+          - http://financeiro.appd/conta-corrente/fazer-transferencia
+
+  pix:
+    type: java
+    agent: yes
+    aliases:
+      - pix.appd
+    endpoints:
+      http:
+        /minhas-chaves:
+          - sql://backend-db/internetbanking?query=SELECT * FROM (SELECT SLEEP(0.128)) AS SLEEP, pix
+          - call: sleep,1357
+            probability: 0.10
+        /extrato:
+          - sleep,256
+          - sql://backend-db/internetbanking?query=SELECT * FROM (SELECT SLEEP(0.523)) AS SLEEP, pix
+          - call: sleep,623
+            probability: 0.50
+        /transferir:
+          - http://financeiro.appd/pix/transferir
+        /pagar-qr-code:
+          - http://financeiro.appd/pix/pagar-qr-code
+        /gerar-qr-code:
+          - sleep,432
+          - call: sleep,631
+            probability: 0.50
+
+  emprestimo:
+    type: php
+    agent: yes
+    aliases:
+      - emprestimo.appd
+    endpoints:
+      http:
+        /listar:
+          - sql://backend-db/internetbanking?query=SELECT * FROM (SELECT SLEEP(0.128)) AS SLEEP, emprestimo
+          - call: sleep,1357
+            probability: 0.10
+        /pedir:
+          - sleep,256
+          - sql://backend-db/internetbanking?query=SELECT * FROM (SELECT SLEEP(0.523)) AS SLEEP, emprestimo
+          - call: sleep,623
+            probability: 0.50
+        /pagar:
+          - http://financeiro.appd/emprestimo/pagar
+
+  cartao:
+    type: java
+    agent: yes
+    aliases:
+      - cartao.appd
+    endpoints:
+      http:
+        /listar:
+          - sql://backend-db/internetbanking?query=SELECT * FROM (SELECT SLEEP(0.357)) AS SLEEP, cartao
+          - call: sleep,1357
+            probability: 0.10
+        /extrato:
+          - sleep,256
+          - sql://backend-db/internetbanking?query=SELECT * FROM (SELECT SLEEP(0.741)) AS SLEEP, cartao
+          - call: sleep,623
+            probability: 0.50
+        /cartao-virtual:
+          - sleep,651
+          - sql://backend-db/internetbanking?query=SELECT SLEEP(0.230);INSERT INTO cartao(brand, account, number, statement, value) VALUES ('brand', 'account', 'number', 'statement', 'value');
+          - call: sleep,2048
+            probability: 0.50
+        /pagar:
+          - http://financeiro.appd/cartao/pagar
 
   cdn.cloud:
     type: nodejs
@@ -56,12 +247,24 @@ services:
       - google.com
       - external.service.cloud
       - internal.service.cloud
+      - ldap.service.appd
+      - bancocentral.cloud
+      - visa.cloud
+      - mastercard.cloud
     endpoints:
       http:
         /logo.png:
           - sleep,100
           - call: sleep,1200
             probability: 0.2
+        /logocartao.png:
+          - sleep,130
+          - call: sleep,600
+            probability: 0.2
+        /qrcode.png:
+          - sleep,133
+          - call: sleep,2500
+            probability: 0.3
         /banner.png:
           - sleep,130
           - call: sleep,900
@@ -78,6 +281,16 @@ services:
           - sleep,128
           - call: sleep,800
             probability: 0.30
+        /authenticate:
+          - sleep,150
+          - call: sleep,400
+            probability: 0.3
+        /authenticate/save:
+          - sql://backend-db/internetbanking?query=SELECT SLEEP(0.230);INSERT INTO users(first_name, last_name, email, brand, account, segment) VALUES ('first_name', 'last_name', 'email', 'brand', 'account', 'segment');
+        /validate:
+          - sleep,300
+          - call: sleep,3000
+            probability: 0.25
 
   backend-db:
     type: mysql
@@ -85,22 +298,91 @@ services:
       internetbanking:
         users: [id, first_name, last_name, email, brand, account, segment]
         statement: [id, brand, account, type, value]
+        pix: [id, brand, account, type, value, key_target]
+        cartao: [id, brand, account, number, type, statement, value]
+        emprestimo: [id, brand, account, type, value]
+
+  financeiro:
+    type: java
+    agent: yes
+    aliases:
+      - financeiro.appd
+    endpoints:
+      http:
+        /conta-corrente/fazer-transferencia:
+          - sleep,128
+          - call: sleep,256
+            probability: 0.2
+          - sql://backend-db/internetbanking?query=SELECT SLEEP(0.324);INSERT INTO statement(brand, account, type, value) VALUES ('brand', 'account', 'type', 'value');
+        /conta-corrente/pagar-boleto:
+          - sleep,128
+          - sql://backend-db/internetbanking?query=SELECT SLEEP(0.542);INSERT INTO statement(brand, account, type, value) VALUES ('brand', 'account', 'type', 'value');
+          - call: sleep,2048
+            probability: 0.50
+        /pix/transferir:
+          - sleep,651
+          - sql://backend-db/internetbanking?query=SELECT SLEEP(0.230);INSERT INTO pix(brand, account, type, value, key_target) VALUES ('brand', 'account', 'type', 'value', 'key_target');
+          - call: sleep,2048
+            probability: 0.50
+          - http://bancocentral.cloud/validate
+        /pix/pagar-qr-code:
+          - sleep,123
+          - sql://backend-db/internetbanking?query=SELECT SLEEP(0.542);INSERT INTO pix(brand, account, type, value, key_target) VALUES ('brand', 'account', 'type', 'value', 'key_target');
+          - call: sleep,4684
+            probability: 0.10
+          - http://bancocentral.cloud/validate
+        /emprestimo/pagar:
+          - sleep,123
+          - sql://backend-db/internetbanking?query=SELECT SLEEP(0.542);INSERT INTO statement(brand, account, type, value) VALUES ('brand', 'account', 'type', 'value');
+          - sql://backend-db/internetbanking?query=SELECT SLEEP(0.123);INSERT INTO emprestimo(brand, account, type, value) VALUES ('brand', 'account', 'type', 'value');
+          - call: sleep,3214
+            probability: 0.10
+        /cartao/pagar:
+          - sleep,123
+          - sql://backend-db/internetbanking?query=SELECT SLEEP(0.542);INSERT INTO statement(brand, account, type, value) VALUES ('brand', 'account', 'type', 'value');
+          - sql://backend-db/internetbanking?query=SELECT SLEEP(0.123);INSERT INTO cartao(brand, account, number, type, statement, value) VALUES ('brand', 'account', 'number', 'type', 'statement', 'value');
+          - call: sleep,3214
+            probability: 0.10
 
 loaders:
   user-geral:
     type: puppeteer
     wait: 60
-    count: 1
-    devices: ["iPhone 11 Pro Max", "Galaxy S5", "iPad Pro landscape", "iPhone 8", "Nexus 6P", "Pixel 2 XL", "Microsoft Lumia 950"]
+    shuffle: true
+    count: 2
+    # https://github.com/puppeteer/puppeteer/blob/main/src/common/DeviceDescriptors.ts
+    devices: 
+      - "iPhone 11 Pro Max"
+      - "Galaxy S5"
+      - "iPad Pro landscape"
+      - "iPhone 8"
+      - "Nexus 6P"
+      - "Pixel 2 XL"
+      - "Microsoft Lumia 950"
     locations:
       - { city: "San Francisco", region: "California", country: "United States" }
       - { city: "Brasilia", region: "Distrito Federal", country: "Brazil" }
       - { city: "Ipatinga", region: "Minas Gerais", country: "Brazil" }
       - { city: "Rio de Janeiro", region: "Rio de Janeiro", country: "Brazil" }
-      - { city: "Manaus", region: "Amazonas", country: "Germany" }
+      - { city: "Manaus", region: "Amazonas", country: "Brazil" }
       - { city: "Tokyo", region: "Kanto", country: "Japan" }
       - { city: "Sapporo", region: "Hokkaido", country: "Japan" }
       - { city: "Fedotyev", region: "Kamchatka", country: "Russian Federation" }
       - { city: "Frankfurt", region: "Hessen", country: "Germany" }
     urls:
-      - http://www.internet-banking.appd/home
+      - [http://www.internet-banking.appd/login,http://www.internet-banking.appd/home,http://www.internet-banking.appd/pix/minhas-chaves]
+      - http://www.internet-banking.appd/conta-corrente/saldo
+      - [http://www.internet-banking.appd/conta-corrente/extrato,http://www.internet-banking.appd/conta-corrente/saldo,http://www.internet-banking.appd/home]
+      - http://www.internet-banking.appd/conta-corrente/fazer-transferencia
+      - [http://www.internet-banking.appd/conta-corrente/extrato,http://www.internet-banking.appd/home,http://www.internet-banking.appd/pix/transferir]
+      - http://www.internet-banking.appd/conta-corrente/listar-boleto-dda
+      - http://www.internet-banking.appd/conta-corrente/pagar-boleto
+      - http://www.internet-banking.appd/pix/transferir
+      - [http://www.internet-banking.appd/pix/gerar-qr-code,http://www.internet-banking.appd/pix/pagar-qr-code,http://www.internet-banking.appd/pix/minhas-chaves]
+      - http://www.internet-banking.appd/pix/extrato
+      - http://www.internet-banking.appd/cartao/listar
+      - [http://www.internet-banking.appd/cartao/extrato,http://www.internet-banking.appd/cartao/cartao-virtual,http://www.internet-banking.appd/cartao/extrato,http://www.internet-banking.appd/cartao/listar]
+      - http://www.internet-banking.appd/cartao/pagar
+      - [http://www.internet-banking.appd/emprestimo/listar,http://www.internet-banking.appd/emprestimo/pedir,http://www.internet-banking.appd/conta-corrente/saldo]
+      - http://www.internet-banking.appd/emprestimo/pagar
+      - [http://www.internet-banking.appd/logout,http://www.internet-banking.appd/conta-corrente/extrato,http://www.internet-banking.appd/conta-corrente/extrato,http://www.internet-banking.appd/home]

@@ -25,6 +25,10 @@ if ( config.browser == undefined ) {
   config.browser = "chrome"
 }
 
+if ( config.shuffle == undefined ) {
+  config.shuffle = false
+}
+
 let appKey = undefined
 let beaconUrlHttp = undefined
 if (typeof apm.eum === 'object') {
@@ -44,7 +48,10 @@ function run() {
       // https://github.com/puppeteer/puppeteer/blob/main/src/common/DeviceDescriptors.ts
       let device = undefined
       if ( config.devices != undefined ) {
-        device = puppeteer.devices[config.devices[Math.floor(Math.random() * config.devices.length)]];
+        let randonDevice = config.devices[Math.floor(Math.random() * config.devices.length)]
+        if ( randonDevice != "" ) {
+          device = puppeteer.devices[config.devices[Math.floor(Math.random() * config.devices.length)]];
+        }
         console.log('  => device [' + device['name'] + ']')
       }
 
@@ -72,8 +79,25 @@ function run() {
       })
 
       var uniqueId = uuidv4()
-      for (var i = 0; i < config.urls.length; i++) {
-        const myUrl = new url.URL(config.urls[i])
+
+      // Embaralhando a sequência das URLs
+      if ( config.shuffle ) {
+        config.urls = config.urls.sort(() => Math.random() - 0.5)
+        console.log('  => Shuffling URLs: ' + config.urls)
+      }
+
+      for (var indexCurrentURL = 0; indexCurrentURL < config.urls.length; indexCurrentURL++) {
+
+        // se é uma lista de URL então sortear uma
+        let myUrl = undefined
+        if (Array.isArray(config.urls[indexCurrentURL])) {
+          let letSortURL = config.urls[indexCurrentURL][Math.floor(Math.random() * config.urls[indexCurrentURL].length)]
+          console.log("  => Sort URL: " + letSortURL)
+          myUrl = new url.URL(letSortURL)
+        } else {
+          myUrl = new url.URL(config.urls[indexCurrentURL])
+        }
+
         var searchParams = myUrl.searchParams
         searchParams.append('unique_session_id', uniqueId)
         myUrl.search = searchParams
