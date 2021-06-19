@@ -29,6 +29,10 @@ if ( config.shuffle == undefined ) {
   config.shuffle = false
 }
 
+if ( config.maxRequest == undefined ) {
+  config.maxRequest = 100
+}
+
 let appKey = undefined
 let beaconUrlHttp = undefined
 if (typeof apm.eum === 'object') {
@@ -48,11 +52,12 @@ function run() {
       // https://github.com/puppeteer/puppeteer/blob/main/src/common/DeviceDescriptors.ts
       let device = undefined
       if ( config.devices != undefined ) {
-        let randonDevice = config.devices[Math.floor(Math.random() * config.devices.length)]
-        if ( randonDevice != "" ) {
-          device = puppeteer.devices[config.devices[Math.floor(Math.random() * config.devices.length)]];
+        let randomDevice = config.devices[Math.floor(Math.random() * config.devices.length)]
+        console.log('  => deviceRandom [' + randomDevice + ']')
+        if ( randomDevice != "" ) {
+          device = puppeteer.devices[randomDevice];
+          console.log('  => device [' + device['name'] + ']')
         }
-        console.log('  => device [' + device['name'] + ']')
       }
 
       const browser = await puppeteer.launch({
@@ -86,7 +91,7 @@ function run() {
         console.log('  => Shuffling URLs: ' + config.urls)
       }
 
-      for (var indexCurrentURL = 0; indexCurrentURL < config.urls.length; indexCurrentURL++) {
+      for (var indexCurrentURL = 0; indexCurrentURL < config.urls.length && indexCurrentURL <= config.maxRequest; indexCurrentURL++) {
 
         // se é uma lista de URL então sortear uma
         let myUrl = undefined
@@ -110,10 +115,10 @@ function run() {
           }
   
           console.log('  => Visiting', myUrl.href)
-          await page.goto(myUrl, { waitUntil: 'networkidle0' })
+          await page.goto(myUrl, { waitUntil: 'networkidle0', timeout: 0 })
           if ( appKey != undefined ) {
             console.log('  => Waiting ADRUM Response')
-            const adrumResponse = await page.waitForResponse(beaconUrlHttp + '/eumcollector/beacons/browser/v1/'+ appKey + '/adrum');
+            const adrumResponse = await page.waitForResponse(beaconUrlHttp + '/eumcollector/beacons/browser/v1/'+ appKey + '/adrum', { timeout: 0 });
             console.log('  => ADRUM Response [' + adrumResponse.status() + ']')
           }
 

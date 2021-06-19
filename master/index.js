@@ -140,24 +140,6 @@ try {
     console.log(chalk.yellow('[infrastructure] skipping machine agent.'))
   }
 
-  if (global.netviz) {
-    var netvizAgentName = `${containerPrefix}-netviz-agent`
-    var netvizAgentCmd = ['docker', 'run',
-      '--rm',
-      '--network=host',
-      '--cap-add=NET_ADMIN',
-      '--cap-add=NET_RAW',
-      '--name', netvizAgentName,
-      '-v', `${dockerLogsVolume}:/logs`,
-      imagePrefix + '/netviz'
-    ]
-
-    runCmd(shellescape(netvizAgentCmd), chalk.green('[infrastructure] starting network visibility agent'))
-    containers.push(netvizAgentName)
-  } else {
-    console.log(chalk.yellow('[infrastructure] skipping network visibility agent.'))
-  }
-    
   if (global.services) {
     Object.keys(services).forEach(function (name) {
       const service = services[name]
@@ -285,7 +267,7 @@ try {
   } else {
     console.log(chalk.yellow('Skipping services.'))
     global.dbmon = global.dbmon === 'maybe' ? false : global.dbmon
-  }
+  }  
 
   if (global.loaders) {
     Object.keys(loaders).forEach(function (name) {
@@ -363,29 +345,22 @@ try {
     containers.push(otelCollectorName)
   }
 
-  if (global.dbmon) {
-    var databaseAgentName = `${containerPrefix}-database-agent`
-    var databaseAgentCmd = ['docker', 'run',
-      '-e', `APPDYNAMICS_CONTROLLER_HOST_NAME=${controller.hostname}`,
-      '-e', `APPDYNAMICS_CONTROLLER_PORT=${controller.port}`,
-      '-e', `APPDYNAMICS_CONTROLLER_SSL_ENABLED=${controller.protocol.startsWith('https')}`,
-      '-e', `APPDYNAMICS_AGENT_ACCOUNT_NAME=${apm.accountName}`,
-      '-e', `APPDYNAMICS_AGENT_ACCOUNT_ACCESS_KEY=${apm.accountAccessKey}`,
-      // '-e', `APPDYNAMICS_DATABASE_AGENT_NAME=${imagePrefix}-${containerPrefix}-database-agent`,
-      '-e', `APPDYNAMICS_DATABASE_AGENT_NAME=${imagePrefix}-database-agent`,
-      '--label', 'container-type=database-agent',
+  if (global.netviz) {
+    var netvizAgentName = `${containerPrefix}-netviz-agent`
+    var netvizAgentCmd = ['docker', 'run',
       '--rm',
-      '--network', dockerNetwork,
-      '--name', databaseAgentName,
-      '--network-alias=databases-agent'
+      '--network=host',
+      '--cap-add=NET_ADMIN',
+      '--cap-add=NET_RAW',
+      '--name', netvizAgentName,
+      '-v', `${dockerLogsVolume}:/logs`,
+      imagePrefix + '/netviz'
     ]
 
-    databaseAgentCmd.push(imagePrefix + '/dbmon')
-
-    runCmd(shellescape(databaseAgentCmd), chalk.green('[infrastructure] starting database agent'))
-    containers.push(databaseAgentName)
+    runCmd(shellescape(netvizAgentCmd), chalk.green('[infrastructure] starting network visibility agent'))
+    containers.push(netvizAgentName)
   } else {
-    console.log(chalk.yellow('[infrastructure] skipping database agent.'))
+    console.log(chalk.yellow('[infrastructure] skipping network visibility agent.'))
   }
 
   if (global.phpproxy > 0) {
@@ -475,6 +450,31 @@ try {
     console.log(chalk.yellow('Skipping chaos generators.'))
   }
 
+  if (global.dbmon) {
+    var databaseAgentName = `${containerPrefix}-database-agent`
+    var databaseAgentCmd = ['docker', 'run',
+      '-e', `APPDYNAMICS_CONTROLLER_HOST_NAME=${controller.hostname}`,
+      '-e', `APPDYNAMICS_CONTROLLER_PORT=${controller.port}`,
+      '-e', `APPDYNAMICS_CONTROLLER_SSL_ENABLED=${controller.protocol.startsWith('https')}`,
+      '-e', `APPDYNAMICS_AGENT_ACCOUNT_NAME=${apm.accountName}`,
+      '-e', `APPDYNAMICS_AGENT_ACCOUNT_ACCESS_KEY=${apm.accountAccessKey}`,
+      // '-e', `APPDYNAMICS_DATABASE_AGENT_NAME=${imagePrefix}-${containerPrefix}-database-agent`,
+      '-e', `APPDYNAMICS_DATABASE_AGENT_NAME=${imagePrefix}-database-agent`,
+      '--label', 'container-type=database-agent',
+      '--rm',
+      '--network', dockerNetwork,
+      '--name', databaseAgentName,
+      '--network-alias=databases-agent'
+    ]
+
+    databaseAgentCmd.push(imagePrefix + '/dbmon')
+
+    runCmd(shellescape(databaseAgentCmd), chalk.green('[infrastructure] starting database agent'))
+    containers.push(databaseAgentName)
+  } else {
+    console.log(chalk.yellow('[infrastructure] skipping database agent.'))
+  }
+  
   if (verbosity < 1) {
     console.log(chalk.blue('Running in quiet mode, use docker attach to read container output'))
   }
