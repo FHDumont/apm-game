@@ -1,5 +1,9 @@
 <?php
 
+header('Access-Control-Allow-Origin: *'); 
+header('Access-Control-Allow-Methods: POST, GET, PUT, OPTIONS, PATCH, DELETE');
+header('Access-Control-Allow-Credentials: true');
+
 if(!extension_loaded('appdynamics_agent')) {
     function appdynamics_start_transaction($arg1, $arg2) {}
     function appdynamics_continue_transaction($arg1) {}
@@ -16,11 +20,10 @@ if(isset($apmConfig->eum)) {
   $withEum = true;
   $eumConfig = $apmConfig->eum;
 
-  $eumConfig->xd = ["enable" => false];
+  $eumConfig->xd = ["enable" => true];
 }
 
-function startsWith($haystack, $needle)
-{
+function startsWith($haystack, $needle) {
      $length = strlen($needle);
      return (substr($haystack, 0, $length) === $needle);
 }

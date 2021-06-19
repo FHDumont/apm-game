@@ -352,6 +352,7 @@ async function processRequest(req, res, params) {
   const path = url.parse(req.url).pathname
 
   var txn = appdynamics.getTransaction(req)
+  
 
   if (txn) {
     var signularityHeader = appdynamics.parseCorrelationInfo(req).headers.singularityheader
@@ -374,6 +375,11 @@ async function processRequest(req, res, params) {
       })
     }
   }
+
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Timing-Allow-Origin', "*");
 
   if (endpoints.hasOwnProperty(path)) {
     try {

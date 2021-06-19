@@ -12,7 +12,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.BufferedReader;
+import java.io.FilenameFilter;
 import java.io.InputStreamReader;
+import java.nio.file.Paths;
+import java.nio.file.Files;
 import java.net.URL;
 import java.net.HttpURLConnection;
 import java.sql.Connection;
@@ -351,18 +354,32 @@ public static class NodeServlet extends HttpServlet {
                 if(withEum) {
 
                         String adrum = "";
-                        String location = "";
+                        String locationCustom = "";
+                        String adrumCustom = "";
 
-                        logger.debug("city: {}", request.getParameter("city"));                                
-                        logger.debug("region: {}", request.getParameter("region"));                                
-                        logger.debug("country: {}", request.getParameter("country"));                                
+                        logger.debug("city: {}", request.getParameter("city"));
+                        logger.debug("region: {}", request.getParameter("region"));
+                        logger.debug("country: {}", request.getParameter("country"));
                         
                         if(request.getParameter("city") != null && request.getParameter("region") != null && request.getParameter("country") != null) {
-                                location = "<script type='text/javascript' charset='UTF-8'>window['adrum-config'] = (function(config) { config.geo = { localIP: '192.168.1.100', city: '" + request.getParameter("city") + "', region: '" + request.getParameter("region") + "', country: '" + request.getParameter("country") + "' }; return config;})(window['adrum-config'] || {});</script>";
-                                logger.info("Location: {}", location);                                
+                                locationCustom = "<script type='text/javascript' charset='UTF-8'>window['adrum-config'] = (function(config) { config.geo = { localIP: '192.168.1.100', city: '" + request.getParameter("city") + "', region: '" + request.getParameter("region") + "', country: '" + request.getParameter("country") + "' }; return config;})(window['adrum-config'] || {});</script>";
+                                logger.debug("Location: {}", locationCustom);
                         }
 
-                        adrum = "<script type='text/javascript' charset='UTF-8'>window['adrum-start-time'] = new Date().getTime();window['adrum-config'] = " + NodeServlet.apmConfig.getJsonObject("eum") + " </script>"+ location + "<script src='//cdn.appdynamics.com/adrum/adrum-latest.js' type='text/javascript' charset='UTF-8'></script>";
+                        try  {
+                                if ( NodeServlet.config.getString("adrumCustom") != null ) {
+                                        String fileName = System.getenv("CUSTOM_CODE_DIR") + "/" + NodeServlet.config.getString("adrumCustom");
+                                        logger.info("adrumCustom fileName: {}", fileName);
+                                        adrumCustom = new String(Files.readAllBytes(Paths.get(fileName)));
+                                        adrumCustom = "<script type='text/javascript' charset='UTF-8'>" + adrumCustom + "</script>";
+                                        logger.debug("adrumCustom content: {}", adrumCustom);
+
+                                }
+                        } catch(Exception e) {
+                                e.printStackTrace();
+                        }
+
+                        adrum = "<script type='text/javascript' charset='UTF-8'>window['adrum-start-time'] = new Date().getTime();window['adrum-config'] = " + NodeServlet.apmConfig.getJsonObject("eum") + "</script>"+ locationCustom + adrumCustom + "<script src='//cdn.appdynamics.com/adrum/adrum-latest.js' type='text/javascript' charset='UTF-8'></script>";
 
                         response.getWriter().println("<!doctype html><html lang=\"en\"><head><title>" + NodeServlet.config.getString("name") + "</title>" + adrum + "<body>" + result);
 
@@ -387,8 +404,15 @@ public static class NodeServlet extends HttpServlet {
                         response.setContentType("text/html;charset=utf-8");
                 }
 
-                if(request.getParameter("uniqueSessionId") != null) {
-                        metricAndEventReporter.addSnapshotData("uniqueSessionId", request.getParameter("uniqueSessionId"), allScopes);
+                response.addHeader("Access-Control-Allow-Origin", "*");
+                response.addHeader("Access-Control-Allow-Methods","GET, POST, OPTIONS, PUT, PATCH, DELETE");
+                response.addHeader("Access-Control-Allow-Credentials", "true");
+                response.addHeader("Timing-Allow-Origin", "*");
+
+                if(request.getParameter("unique_session_id") != null) {
+                        if(hasMetricAndEventReporter()) {
+                                metricAndEventReporter.addSnapshotData("uniqueSessionId", request.getParameter("unique_session_id"), allScopes);
+                        }
                 }
 
                 try {
