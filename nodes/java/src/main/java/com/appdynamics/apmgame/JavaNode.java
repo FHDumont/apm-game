@@ -35,6 +35,8 @@ import net.sf.ehcache.CacheManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.UUID;
+
 public class JavaNode {
 
 protected static Cache cache;
@@ -158,9 +160,9 @@ public static class NodeServlet extends HttpServlet {
                 return "Database query executed: " + call;
         }
 
-        protected String callRemote(String call, boolean catchExceptions, int remoteTimeout) throws IOException {
+        protected String callRemote(String call, boolean catchExceptions, int remoteTimeout, String uniqueSessionId) throws IOException {
                 try {
-                        URL url = new URL(call);
+                        URL url = new URL(call + "?unique_session_id=" + uniqueSessionId);
                         // return new Scanner( url.openStream() ).useDelimiter( "\\Z" ).next();
                         HttpURLConnection con = (HttpURLConnection) url.openConnection();
 
@@ -208,7 +210,7 @@ public static class NodeServlet extends HttpServlet {
                 return "Logged (" + level + "): " + msg;
         }
 
-        protected String processCall(String call, boolean catchExceptions, int remoteTimeout) throws IOException {
+        protected String processCall(String call, boolean catchExceptions, int remoteTimeout, String uniqueSessionId) throws IOException {
                 logger.info("Processing call: {}", call);
                 if (call.startsWith("sleep")) {
                         int timeout = Integer.parseInt(call.split(",")[1]);
@@ -239,7 +241,7 @@ public static class NodeServlet extends HttpServlet {
                 }
 
                 if (call.startsWith("http://")) {
-                        return this.callRemote(call, catchExceptions, remoteTimeout);
+                        return this.callRemote(call, catchExceptions, remoteTimeout, uniqueSessionId);
                 }
                 if (call.startsWith("sql://")) {
                         return this.queryDatabase(call, catchExceptions, remoteTimeout);
@@ -283,32 +285,57 @@ public static class NodeServlet extends HttpServlet {
                         return "Data not processed: No id provided";
                 }
 
-                if(!data.containsKey("value")) {
-                        return "Data not processed: No value provided";
-                }
-
                 String id = data.getString("id");
                 String type = data.containsKey("type")  ? data.getString("type").toLowerCase() : "string";
+                String chance = data.containsKey("chance") ? data.getString("chance").toLowerCase() : "";
 
-                JsonValue value = data.get("value");
+                String value = "";
+                
+                if ( !chance.equals("")) {
+                        String[] chanceSplit = chance.split(",");
 
-                if (value.getValueType() == JsonValue.ValueType.ARRAY) {
-                        JsonArray arr = (JsonArray) value;
-                        int index = ThreadLocalRandom.current().nextInt(arr.size());
-                        value = arr.get(index);
+                        switch(chanceSplit[0]){
+                            case "guid":
+                                value = UUID.randomUUID().toString();
+                                break;
+                            case "integer":
+                                int min = Integer.parseInt(chanceSplit[1].split(":")[1]);
+                                int max = Integer.parseInt(chanceSplit[2].split(":")[1]);
+                                value = String.valueOf(ThreadLocalRandom.current().nextInt(min, max + 1));
+                                break;
+                        }
+                        switch(type) {
+                                case "int":
+                                        return processIntData(id, Integer.parseInt(value));
+                                case "double":
+                                        return processDoubleData(id, Double.parseDouble(value));
+                                default:
+                                        return processStringData(id, value);
+                        }
+
+                } else {
+                        if(!data.containsKey("value")) {
+                                return "Data not processed: No value provided";
+                        }
+                        JsonValue valueJson = data.get("value");
+                        if (valueJson.getValueType() == JsonValue.ValueType.ARRAY) {
+                                JsonArray arr = (JsonArray) valueJson;
+                                int index = ThreadLocalRandom.current().nextInt(arr.size());
+                                valueJson = arr.get(index);
+                        }
+                        switch(type) {
+                                case "int":
+                                        return processIntData(id, ((JsonNumber)valueJson).longValue());
+                                case "double":
+                                        return processDoubleData(id, ((JsonNumber)valueJson).doubleValue());
+                                default:
+                                        return processStringData(id, ((JsonString)valueJson).getString());
+                                }                        
                 }
 
-                switch(type) {
-                case "int":
-                        return processIntData(id, ((JsonNumber)value).longValue());
-                case "double":
-                        return processDoubleData(id, ((JsonNumber)value).doubleValue());
-                default:
-                        return processStringData(id, ((JsonString)value).getString());
-                }
         }
 
-        protected String preProcessCall(JsonValue call) throws IOException {
+        protected String preProcessCall(JsonValue call, String uniqueSessionId) throws IOException {
 
                 boolean catchExceptions = true;
                 int remoteTimeout = Integer.MAX_VALUE;
@@ -339,16 +366,16 @@ public static class NodeServlet extends HttpServlet {
                                 remoteTimeout = obj.getInt("remoteTimeout");
                         }
                 }
-                return this.processCall(((JsonString) call).getString(), catchExceptions, remoteTimeout);
+                return this.processCall(((JsonString) call).getString(), catchExceptions, remoteTimeout, uniqueSessionId);
         }
 
-        public void handleEndpoint(HttpServletRequest request, HttpServletResponse response, JsonArray endpoint, boolean withEum) throws IOException {
+        public void handleEndpoint(HttpServletRequest request, HttpServletResponse response, JsonArray endpoint, boolean withEum, String uniqueSessionId) throws IOException {
                 response.setStatus(HttpServletResponse.SC_OK);
 
                 StringBuilder result = new StringBuilder();
 
                 for (JsonValue entry : endpoint) {
-                        result.append(this.preProcessCall(entry));
+                        result.append(this.preProcessCall(entry, uniqueSessionId));
                 }
 
                 if(withEum) {
@@ -376,7 +403,7 @@ public static class NodeServlet extends HttpServlet {
 
                                 }
                         } catch(Exception e) {
-                                e.printStackTrace();
+                                // e.printStackTrace();
                         }
 
                         adrum = "<script type='text/javascript' charset='UTF-8'>window['adrum-start-time'] = new Date().getTime();window['adrum-config'] = " + NodeServlet.apmConfig.getJsonObject("eum") + "</script>"+ locationCustom + adrumCustom + "<script src='//cdn.appdynamics.com/adrum/adrum-latest.js' type='text/javascript' charset='UTF-8'></script>";
@@ -390,6 +417,13 @@ public static class NodeServlet extends HttpServlet {
 
         @Override
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+
+                String uniqueSessionId = "";
+                if(request.getParameter("unique_session_id") != null) {
+                        uniqueSessionId = request.getParameter("unique_session_id");
+                        response.addHeader("uniqueSessionId", uniqueSessionId);
+                }
+
                 String endpoint = request.getRequestURI();
                 logger.info("Endpoint: {}", endpoint);
 
@@ -408,18 +442,16 @@ public static class NodeServlet extends HttpServlet {
                 response.addHeader("Access-Control-Allow-Methods","GET, POST, OPTIONS, PUT, PATCH, DELETE");
                 response.addHeader("Access-Control-Allow-Credentials", "true");
                 response.addHeader("Timing-Allow-Origin", "*");
-
-                if(request.getParameter("unique_session_id") != null) {
-                        if(hasMetricAndEventReporter()) {
-                                metricAndEventReporter.addSnapshotData("uniqueSessionId", request.getParameter("unique_session_id"), allScopes);
-                        }
+                
+                if ( !uniqueSessionId.equals("") && hasMetricAndEventReporter()) {
+                        metricAndEventReporter.addSnapshotData("uniqueSessionId", uniqueSessionId, allScopes);
                 }
 
                 try {
                         if (NodeServlet.endpoints.containsKey(endpoint)) {
-                                this.handleEndpoint(request, response, NodeServlet.endpoints.getJsonArray(endpoint), withEum);
+                                this.handleEndpoint(request, response, NodeServlet.endpoints.getJsonArray(endpoint), withEum, uniqueSessionId);
                         } else if (NodeServlet.endpoints.containsKey(endpoint.substring(1))) {
-                                this.handleEndpoint(request, response, NodeServlet.endpoints.getJsonArray(endpoint.substring(1)), withEum);
+                                this.handleEndpoint(request, response, NodeServlet.endpoints.getJsonArray(endpoint.substring(1)), withEum, uniqueSessionId);
                         } else {
                                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
                                 response.getWriter().println(404);
