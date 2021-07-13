@@ -33,6 +33,15 @@ if ( config.maxRequest == undefined ) {
   config.maxRequest = 100
 }
 
+if ( config.drop == undefined ) {
+  config.drop = 0
+}
+config.dropStart = config.drop
+
+if ( config.dropStep == undefined ) {
+  config.dropStep = 0
+}
+
 let appKey = undefined
 let beaconUrlHttp = undefined
 if (typeof apm.eum === 'object') {
@@ -127,9 +136,19 @@ function run() {
           console.log(e)
           await new Promise(resolve => setTimeout(resolve, 1500))
         }
+
+        if ( config.drop > 0 && indexCurrentURL < config.urls.length ) {
+          var randomDrop = Math.random()
+          if ( config.drop >= randomDrop ) {
+            console.log('  => Drop session: URL [', indexCurrentURL + 1, '] ', config.drop, randomDrop);
+            indexCurrentURL = config.maxRequest + 1
+          }
+          config.drop = config.drop + config.dropStep
+        }        
       }
 
       await browser.close()
+      config.drop = config.dropStart
     }
     
   })()

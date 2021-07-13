@@ -1,0 +1,543 @@
+# Colocar sizing nas imagens
+# Colocar sizing nos scripts
+
+global:
+  machine: true
+  netviz: true
+  loaders: true
+  services: true
+  chaos: true
+  dbmon: true
+
+apm:
+  applicationName: INTERNET_BANKING
+  eum:
+    appKey: AD-AAB-ABF-CMK
+
+services:
+  WebFrontEnd:
+    type: java
+    agent: yes
+    port: 3000
+    aliases:
+      - www.internet-banking.appd
+    endpoints:
+      http:
+        /login:
+          - call: sleep,512
+          - http://AuthenticationServices/authenticate
+        /accountsHome:
+          - call: sleep,512
+          - http://AccountManagement/rest/accountManagement/accountsHome
+        /loanApplication:
+          - call: sleep,512
+          - http://AccountManagement/rest/accountManagement/loanApplication
+        /loanVerifyDocumentation:
+          - call: sleep,512
+          - http://AccountManagement/rest/accountManagement/loanVerifyDocumentation
+        /loanUnderwritingComplete:
+          - call: sleep,512
+          - http://AccountManagement/rest/accountManagement/loanUnderwritingComplete
+        /loanApproved:
+          - call: sleep,512
+          - call: http://WireServices/loanApproved
+            probability: 0.25
+          - http://AccountManagement/rest/accountManagement/loanApproved
+        /loanCreditCheck:
+          - call: sleep,512
+          - http://WireServices/rest/WireServices/loanCreditCheck
+        /researchStock:
+          - call: sleep,512
+          - http://QuoteServices/rest/quoteServices/researchStock
+        /getQuote:
+          - call: sleep,512
+          - http://QuoteServices/rest/quoteServices/getStockQuote
+        /processTrade:
+          - call: sleep,512
+          - http://OrderProcessing/rest/orderProcessing/processTrade
+        /policyApplication:
+          - call: sleep,512
+          - http://AccountManagement/rest/accountManagement/policyApplication
+        /policyVehicleEntry:
+          - call: sleep,512
+          - call: http://AccountManagement/rest/accountManagement/policyVehicleEntry
+            remoteTimeout: 8000
+        /policyDriverEntry:
+          - call: sleep,512
+          - http://AccountManagement/rest/accountManagement/policyDriverEntry
+        /policyFetchDiscounts:
+          - call: sleep,512
+          - http://AccountManagement/rest/accountManagement/policyFetchDiscounts
+        /policyGenerateQuote:
+          - call: sleep,512
+          - call: http://AccountManagement/rest/accountManagement/policyGenerateQuote
+            remoteTimeout: 10000
+        /policyPayQuote:
+          - call: sleep,512
+          - call: http://AccountManagement/rest/accountManagement/policyPayQuote
+            remoteTimeout: 5000          
+
+  OrderProcessing:
+    type: java
+    agent: yes
+    endpoints:
+      http:
+        /rest/orderProcessing/processTrade:
+          - call: sleep,512
+          - sql://BackendDB/trade?query=INSERT INTO Orders (TradePrice, TradeQuantityAmount, TradeDollarAmount) VALUES ( 'TradePrice', 'TradeQuantityAmount', 'TradeDollarAmount' )
+          - call: data
+            id: ibTradeQuantity
+            type: int
+            chance: integer,min:10,max:500
+          - call: data
+            id: ibTradeAmount
+            type: int
+            chance: integer,min:100,max:50000
+          - call: data
+            id: tradeExecuted
+            type: int
+            value: [1,1,1,0]
+
+  AuthenticationServices:
+    type: java
+    agent: yes
+    endpoints:
+      http:
+        /authenticate:
+          - call: sleep,512
+          - call: data
+            id: firstName
+            value: ['Fernando','Antonio','Gabriela','Jeffersib','Alex','Tom','Ana','Michele','Pedro','Gabriel','Leandro','Karen','Carol','Andrea','Mike','Paulo','Rodrigo','Guilherme']
+          - call: data
+            id: lastName
+            value: ['Silva','Lopes','Santos','Oliveira','Lima','Souza','Pereira','Costa']
+          - call: data
+            id: email
+            value: ['example@aol','example@hotmail','example@yahoo','example@gmail','example@icloud']
+          - call: data
+            id: accountId
+            value: ['ACC-1','ACC-2','ACC-3','ACC-4','ACC-5','ACC-6','ACC-7','ACC-8','ACC-9','ACC-10','ACC-11','ACC-12']
+          - call: http://ldap.app/validateUser
+            remoteTimeout: 15000          
+
+  SessionTrack:
+    type: java
+    agent: yes
+    endpoints:
+      http:
+        /logSession:
+          - call: sleep,512
+          - sql://BackendDB/ib?query=INSERT INTO Sessions(SessionId, SessionDate) VALUES ('SessionId', 'SessionDate')
+
+  QuoteServices:
+    type: java
+    agent: yes
+    endpoints:
+      http:
+        /rest/quoteServices/researchStock:
+          - call: sleep,512
+          - call: data
+            id: stockCode
+            value: ['CSCO', 'BBAS3', 'VALE3', 'APPL', 'TSLA', 'VVAR3', 'GOOGL', 'PETR4', 'CSNA3']
+          - sql://BackendDB/trade?query=SELECT * FROM Stock
+        /rest/quoteServices/getStockQuote:
+          - call: sleep,512
+          - sql://BackendDB/trade?query=SELECT * FROM Stock
+          - http://StockInfoServices/rest/stockInfoServices/getStockInfo
+
+  StockInfoServices:
+    type: java
+    agent: yes
+    endpoints:
+      http:
+        /rest/stockInfoServices/getStockInfo:
+          - call: sleep,512
+          - sql://BackendDB/trade?query=SELECT * FROM Stock
+          - call: data
+            id: stockCode
+            value: ['CSCO', 'BBAS3', 'VALE3', 'APPL', 'TSLA', 'VVAR3', 'GOOGL', 'PETR4', 'CSNA3']
+          - call: data
+            id: ibStockCodePrice
+            type: int
+            chance: integer,min:100,max:500
+
+  AccountManagement:
+    type: java
+    agent: yes
+    endpoints:
+      http:
+        /rest/accountManagement/accountsHome:
+          - call: sleep,512
+          - http://SessionTrack/logSession
+          - http://BalanceServices/rest/balanceServices/getAccountsBalances
+        /rest/accountManagement/loanApplication:
+          - call: sleep,512
+          - http://LoanServices/rest/loanServices/loanApplication
+        /rest/accountManagement/loanVerifyDocumentation:
+          - call: sleep,512
+          - http://LoanServices/rest/loanServices/loanVerifyDocumentation
+        /rest/accountManagement/loanCreditCheck:
+          - call: sleep,512
+          - http://LoanServices/rest/loanServices/loanCreditCheck
+        /rest/accountManagement/loanUnderwritingComplete:
+          - call: sleep,512
+          - http://LoanServices/rest/loanServices/loanUnderwritingComplete
+        /rest/accountManagement/loanApproved:
+          - call: sleep,512
+          - http://LoanServices/rest/loanServices/loanApproved
+        /rest/accountManagement/policyApplication:
+          - call: sleep,512
+          - http://PolicyServices/rest/policyServices/policyApplication
+        /rest/accountManagement/policyVehicleEntry:
+          - call: sleep,512
+          - http://PolicyServices/rest/policyServices/policyVehicleEntry
+        /rest/accountManagement/policyDriverEntry:
+          - call: sleep,512
+          - http://PolicyServices/rest/policyServices/policyDriverEntry
+        /rest/accountManagement/policyFetchDiscounts:
+          - call: sleep,512
+          - http://PolicyServices/rest/policyServices/policyFetchDiscounts
+        /rest/accountManagement/policyGenerateQuote:
+          - call: sleep,512
+          - call: http://PolicyServices/rest/policyServices/policyGenerateQuote
+            remoteTimeout: 10000
+        /rest/accountManagement/policyPayQuote:
+          - call: sleep,512
+          - http://PolicyServices/rest/policyServices/policyPayQuote
+
+  WireServices:
+    type: java
+    agent: yes
+    endpoints:
+      http:
+        /rest/WireServices/loanCreditCheck:
+          - call: sleep,512
+          - http://AccountManagement/rest/accountManagement/loanCreditCheck
+        /loanApproved:
+          - call: sleep,512
+          - http://BalanceServices/rest/balanceServices/loanApproved
+
+  BalanceServices:
+    type: java
+    agent: yes
+    endpoints:
+      http:
+        /rest/balanceServices/loanApproved:
+          - call: sleep,512
+        /rest/balanceServices/getAccountsBalances:
+          - call: sleep,512
+          - sql://BackendDB/ib?query=SELECT * FROM Accounts WHERE AccountId = 124
+          - http://BalanceServices/rest/balanceServices/getAccountBalance
+        /rest/balanceServices/getAccountBalance:
+          - call: sleep,512
+
+  PolicyServices:
+    type: java
+    agent: yes
+    endpoints:
+      http:
+        /rest/policyServices/policyApplication:
+          - call: sleep,512
+          - sql://BackendDB/policy?query=SELECT * FROM Policies
+          - call: data
+            id: firstName
+            value: ['Fernando','Antonio','Gabriela','Jeffersib','Alex','Tom','Ana','Michele','Pedro','Gabriel','Leandro','Karen','Carol','Andrea','Mike','Paulo','Rodrigo','Guilherme']
+          - call: data
+            id: lastName
+            value: ['Silva','Lopes','Santos','Oliveira','Lima','Souza','Pereira','Costa']
+          - call: data
+            id: driverGender
+            value: ['M', 'F']
+          - call: data
+            id: driverCity
+            value: ['Ipatinga, MG','Brasilia, DF','Sao Paulo, SP','Goiania, GO','Rio de Janeiro, RJ','Belo Horizonte, MG','Salvador, BA','Manaus, MA','New York, NY','Chicago, IL','Philadelphia, PA']
+          - call: sleep,8000
+            probability: 0.15
+        /rest/policyServices/policyVehicleEntry:
+          - call: sleep,512
+          - call: data
+            id: vehicleType
+            value: ['Carro', 'Caminhao', 'Moto']
+          - call: data
+            id: vehicleMake
+            value: ['BMW', 'Buick', 'Chevrolet', 'Ford', 'Lexus', 'Toyota', 'Nissan', 'Yamaha', 'Ducati']
+          - call: data
+            id: vehicleModel
+            value: ['X5', 'T-Cross', 'Civic', 'Corolla', 'Altima', 'F-250', 'RAM', 'GSX-R1000', 'Escape']
+          - call: data
+            id: vehicleYear
+            type: int
+            chance: integer,min:2010,max:2022
+          - call: data
+            id: policyType
+            value: ['Responsabilidade', 'Colisao', 'Compreensiva', 'Proteção Ferimentos Pessoais']
+        /rest/policyServices/policyDriverEntry:
+          - call: sleep,512
+          - call: data
+            id: driverAge
+            value: ['16-24','25-34','25-34','25-34','35-54','35-54','35-54','35-54','55-64','55-64','55-64','65-79','65-79','80+']
+          - call: data
+            id: driverType
+            value: ['Platinum', 'Gold', 'Silver']
+        /rest/policyServices/policyFetchDiscounts:
+          - call: sleep,512
+          - call: data
+            id: policyDiscountAmount
+            type: int
+            value: [0,5,10,15,20,25,30]
+        /rest/policyServices/policyGenerateQuote:
+          - call: sleep,512
+          - call: data
+            id: policyAmount
+            type: int
+            chance: integer,min:350,max:5000
+          - call: sleep,20000
+            schedule: "* */2 * * * * *"
+            probability: 0.10
+          - call: error,401,You dont have money
+            schedule: "* */3 * * * * *"
+            probability: 0.10
+          - call: error,500,Internal Error Server
+            probability: 0.10
+        /rest/policyServices/policyPayQuote:
+          - call: sleep,512
+          - call: data
+            id: policyApproved
+            type: int
+            value: [1,1,1,0]
+          - call: sleep,20000
+            probability: 0.15
+
+  LoanServices:
+    type: java
+    agent: yes
+    endpoints:
+      http:
+        /rest/loanServices/loanApplication:
+          - call: sleep,512
+          - call: data
+            id: firstName
+            value: ['Fernando','Antonio','Gabriela','Jeffersib','Alex','Tom','Ana','Michele','Pedro','Gabriel','Leandro','Karen','Carol','Andrea','Mike','Paulo','Rodrigo','Guilherme']
+          - call: data
+            id: lastName
+            value: ['Silva','Lopes','Santos','Oliveira','Lima','Souza','Pereira','Costa']
+          - call: data
+            id: email
+            value: ['example@aol','example@hotmail','example@yahoo','example@gmail','example@icloud']
+          - call: data
+            id: accountId
+            value: ['ACC-1','ACC-2','ACC-3','ACC-4','ACC-5','ACC-6','ACC-7','ACC-8','ACC-9','ACC-10','ACC-11','ACC-12']
+          - call: data
+            id: loanType
+            value: ['Convencional', 'Agro', 'Imobiliario', 'Auto', 'Pequenos Negocios']
+          - call: data
+            id: ibLoanAmount
+            type: int
+            chance: integer,min:250,max:50000
+          - call: data
+            id: loanCity
+            value: ['Ipatinga, MG','Brasilia, DF','Sao Paulo, SP','Goiania, GO','Rio de Janeiro, RJ','Belo Horizonte, MG','Salvador, BA','Manaus, MA','New York, NY','Chicago, IL','Philadelphia, PA']
+          - call: data
+            id: originatingBank
+            value: ['Bank-1','Bank-2','Bank-3','Bank-4','Bank-5','Bank-6','Bank-7','Bank-8','Bank-9','Bank-10']
+          - call: data
+            id: creditCheckProvider
+            value: ['CC-World', 'YourCredit', 'Uni-Credit', 'CreditExperts']
+          - call: sleep,8000
+            probability: 0.25
+        /rest/loanServices/loanVerifyDocumentation:
+          - call: sleep,512
+          - sql://BackendDB/loan?query=INSERT INTO Loan (LoanId) VALUES ('LoanId')
+          - call: sleep,2048
+            probability: 0.10
+        /rest/loanServices/loanCreditCheck:
+          - call: sleep,512
+          - sql://BackendDB/loan?query=SELECT * FROM Loan
+          - call: data
+            id: creditCheckPass
+            type: int
+            value: [1,1,1,0]
+          - call: http://serasa.app/creditCheck
+            remoteTimeout: 10000
+        /rest/loanServices/loanUnderwritingComplete:
+          - call: sleep,512
+          - sql://BackendDB/loan?query=INSERT INTO Loan (LoanId, Amount) VALUES ('LoanId', 'Amount')
+          - call: sleep,2048
+            probability: 0.10
+        /rest/loanServices/loanApproved:
+          - call: sleep,512
+          - sql://BackendDB/loan?query=INSERT INTO Loan (LoanId, Amount, Approved) VALUES ('LoanId', 'Amount', 'Approved')
+          - call: data
+            id: loanApproved
+            type: int
+            value: [1,1,1,0]
+          - call: sleep,25000
+            schedule: "*/5 * * * *"
+            probability: 0.3
+
+  RemoteServices:
+    type: nodejs
+    agent: no
+    aliases:
+      - serasa.app
+      - ldap.app
+    endpoints:
+      http:
+        /creditCheck:
+          - call: sleep,512
+          - call: sleep,20000
+            schedule: "* */2 * * * * *"
+          - call: error,401,You dont have money
+            schedule: "* */3 * * * * *"
+          - call: error,500,Internal Error Server
+            probability: 0.025
+        /validateUser:
+          - call: sleep,512
+          - call: sleep,20000
+            schedule: "* */2 * * * * *"
+          - call: error,403,Password invalid
+            schedule: "* */3 * * * * *"
+
+  BackendDB:
+    type: mysql
+    databases:
+      trade:
+        Orders: [id, TradePrice, TradeQuantityAmount, TradeDollarAmount]
+        Quotes: [id, QuoteId]
+        Stock: [id, Stock]
+      ib:
+        Accounts: [id, AccountId, CustomerId]
+        Sessions: [id, SessionId, SessionDate]
+      policy:
+        Policies: [id, Policy]
+      loan:
+        Loan: [id, LoanId, Amount, Approved]
+
+loaders:
+   load-trade:
+    type: puppeteer
+    wait: 90
+    count: 1
+    drop: 0.05
+    dropStep: 0.025
+    devices:
+      - ""
+      - "iPhone 11 Pro Max"
+      - "Galaxy S5"
+      - "iPad Pro landscape"
+      - "iPhone 8"
+      - "Nexus 6P"
+      - "Pixel 2 XL"
+      - "Microsoft Lumia 950"
+    locations:
+      - { city: "San Francisco", region: "California", country: "United States" }
+      - { city: "Brasilia", region: "Distrito Federal", country: "Brazil" }
+      - { city: "Ipatinga", region: "Minas Gerais", country: "Brazil" }
+      - { city: "Rio de Janeiro", region: "Rio de Janeiro", country: "Brazil" }
+      - { city: "Manaus", region: "Amazonas", country: "Brazil" }
+      - { city: "Tokyo", region: "Kanto", country: "Japan" }
+      - { city: "Sapporo", region: "Hokkaido", country: "Japan" }
+      - { city: "Fedotyev", region: "Kamchatka", country: "Russian Federation" }
+      - { city: "Frankfurt", region: "Hessen", country: "Germany" }
+    urls:
+      - http://www.internet-banking.appd/login
+      - http://www.internet-banking.appd/accountsHome
+      - http://www.internet-banking.appd/researchStock
+      - http://www.internet-banking.appd/getQuote
+      - http://www.internet-banking.appd/processTrade
+      - http://www.internet-banking.appd/getQuote
+      - http://www.internet-banking.appd/processTrade
+      - http://www.internet-banking.appd/getQuote
+      - http://www.internet-banking.appd/processTrade
+      
+   load-policy:
+    type: puppeteer
+    wait: 90
+    count: 2
+    drop: 0.05
+    dropStep: 0.025
+    devices:
+      - ""
+      - "iPhone 11 Pro Max"
+      - "Galaxy S5"
+      - "iPad Pro landscape"
+      - "iPhone 8"
+      - "Nexus 6P"
+      - "Pixel 2 XL"
+      - "Microsoft Lumia 950"
+    locations:
+      - { city: "San Francisco", region: "California", country: "United States" }
+      - { city: "Brasilia", region: "Distrito Federal", country: "Brazil" }
+      - { city: "Ipatinga", region: "Minas Gerais", country: "Brazil" }
+      - { city: "Rio de Janeiro", region: "Rio de Janeiro", country: "Brazil" }
+      - { city: "Manaus", region: "Amazonas", country: "Brazil" }
+      - { city: "Tokyo", region: "Kanto", country: "Japan" }
+      - { city: "Sapporo", region: "Hokkaido", country: "Japan" }
+      - { city: "Fedotyev", region: "Kamchatka", country: "Russian Federation" }
+      - { city: "Frankfurt", region: "Hessen", country: "Germany" }
+    urls:
+      - http://www.internet-banking.appd/policyApplication
+      - http://www.internet-banking.appd/policyVehicleEntry
+      - http://www.internet-banking.appd/policyDriverEntry
+      - http://www.internet-banking.appd/policyFetchDiscounts
+      - http://www.internet-banking.appd/policyGenerateQuote
+      - http://www.internet-banking.appd/policyPayQuote
+
+   load-approval:
+    type: puppeteer
+    wait: 90
+    count: 2
+    drop: 0.05
+    dropStep: 0.025
+    devices:
+      - ""
+      - "iPhone 11 Pro Max"
+      - "Galaxy S5"
+      - "iPad Pro landscape"
+      - "iPhone 8"
+      - "Nexus 6P"
+      - "Pixel 2 XL"
+      - "Microsoft Lumia 950"
+    locations:
+      - { city: "San Francisco", region: "California", country: "United States" }
+      - { city: "Brasilia", region: "Distrito Federal", country: "Brazil" }
+      - { city: "Ipatinga", region: "Minas Gerais", country: "Brazil" }
+      - { city: "Rio de Janeiro", region: "Rio de Janeiro", country: "Brazil" }
+      - { city: "Manaus", region: "Amazonas", country: "Brazil" }
+      - { city: "Tokyo", region: "Kanto", country: "Japan" }
+      - { city: "Sapporo", region: "Hokkaido", country: "Japan" }
+      - { city: "Fedotyev", region: "Kamchatka", country: "Russian Federation" }
+      - { city: "Frankfurt", region: "Hessen", country: "Germany" }
+    urls:
+      - http://www.internet-banking.appd/loanApplication
+      - http://www.internet-banking.appd/loanVerifyDocumentation
+      - http://www.internet-banking.appd/loanCreditCheck
+      - http://www.internet-banking.appd/loanUnderwritingComplete
+      - http://www.internet-banking.appd/loanApproved
+
+chaos:
+  pause-cdn.in-the.cloud:
+    type: pumba
+    interval: 3m
+    target:
+      - RemoteServices
+    command: pause
+    duration: 10s
+  network-loss:
+    type: pumba
+    interval: 5m
+    target:
+      - LoanServices
+    command: netem-loss
+    duration: 1m
+    probability: 25
+  network-delay:
+    type: pumba
+    interval: 8m
+    target:
+      - BackendDB
+      - StockInfoServices
+      - BalanceServices
+    command: netem-delay
+    duration: 30s
+    time: 5000
