@@ -1,4 +1,4 @@
-FROM fernandodumont/puppeteer:1.0
+FROM fernandodumont/puppeteer:latest
 WORKDIR /app
 COPY package.json /app
 RUN sed -i -e s'#"puppeteer": .*##' /app/package.json
