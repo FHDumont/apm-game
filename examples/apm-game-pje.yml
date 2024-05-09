@@ -1,0 +1,312 @@
+# Colocar sizing nas imagens
+# Colocar sizing nos scripts
+
+global:
+  machine: true
+  netviz: true
+  loaders: true
+  services: true
+  chaos: true
+  dbmon: true
+
+apm:
+  applicationName: PJe
+  eum:
+    appKey: AD-AAB-ACD-AHV
+
+services:
+  WebFrontEnd:
+    type: java
+    agent: yes
+    port: 3000
+    adrumCustom: pje.js
+    aliases:
+      - www.pje.appd
+    endpoints:
+      http:
+        /abertura.processo:
+          - call: slow,512
+          - http://ConsultarProcesso/consultar.processo
+          - http://ExecutarProcesso/abrir.processo
+          - call: image,http://cdn.in-the.cloud/logo.png
+        /agendamento.audiencia:
+          - call: slow,512
+          - http://MNI/integracao
+          - call: image,http://cdn.in-the.cloud/logo_v2.png
+            probability: 0.80
+          - call: http://ExecutarProcesso/agendar.audiencia
+            probability: 0.10
+        /assinar.documento:
+          - call: slow,512
+          - http://MNI/integracao
+          - http://ExecutarProcesso/assinar.processo
+          - call: image,http://cdn.in-the.cloud/logo.png
+        /consulta.publica:
+          - call: slow,512
+          - http://ConsultarProcesso/consultar.processo
+          - call: image,http://cdn.in-the.cloud/logo.png
+        /consulta.processo:
+          - call: slow,512
+          - http://ConsultarProcesso/consultar.processo
+          - call: image,http://cdn.in-the.cloud/logo.png
+        /distribuicao.processo:
+          - call: slow,512
+          - http://ConsultarProcesso/consultar.processo
+          - call: image,http://cdn.in-the.cloud/logo.png
+          - call: http://ExecutarProcesso/distribuir.processo
+            remoteTimeout: 8000
+        /login:
+          - call: slow,512
+          - http://UsuariosServices/login
+          - call: image,http://cdn.in-the.cloud/logo_v2.png
+            probability: 0.80
+        /login.cpf:
+          - call: slow,512
+          - http://UsuariosServices/login
+          - call: image,http://cdn.in-the.cloud/logo.png
+          - call: http://ldap.app/validar.cpf
+            remoteTimeout: 10000
+        /mmi.integracao:
+          - call: slow,512
+          - http://MNI/integracao
+          - call: image,http://cdn.in-the.cloud/logo.png
+        /pesquisar.processo:
+          - call: slow,512
+          - http://ConsultarProcesso/consultar.processo
+          - call: image,http://cdn.in-the.cloud/logo.png
+        /quartz:
+          - http://www.oab.gov.br/aux
+          - http://wwwh.cnj.jus.br/aux
+        /download.processo:
+          - cache,128
+          - http://ConsultarProcesso/consultar.processo
+          - call: image,http://cdn.in-the.cloud/processo.pdf
+          - call: image,http://cdn.in-the.cloud/processo_v2.pdf
+            probability: 0.50
+          - cache,512
+
+  UsuariosServices:
+    type: java
+    agent: yes
+    endpoints:
+      http:
+        /login:
+          - call: slow,512
+          - sql://BackendBD/pje?query=SELECT id, nome, email, cpf FROM Usuarios;SELECT SLEEP(500/1000);
+
+  Quartz:
+    type: java
+    agent: yes
+    endpoints:
+      http:
+        /executar:
+          - call: slow,512
+          - sql://BackendBD/quartz?query=INSERT INTO Schedule (acao, executado) VALUES ('abc','1');SELECT SLEEP(500/1000);
+          - call: slow,15000
+            probability: 0.10
+          - call: http://www.pje.appd/quartz
+            remoteTimeout: 3000
+
+  cdn.in-the.cloud:
+    type: nodejs
+    agent: no
+    # options:
+    #   connectionDelay: 5000
+    endpoints:
+      http:
+        /processo.pdf:
+          - call: sleep,1200
+        /processo_v2.pdf:
+          - call: sleep,6000
+        /logo.png:
+          - call: sleep,128
+        /logo_v2.png:
+          - call: sleep,6000
+
+  RemoteServices:
+    type: nodejs
+    agent: no
+    aliases:
+      - ldap.app
+      - sistema.spc.org.br
+      - wwwh.cnj.jus.br
+      - icp-brasil.com.br
+      - www.oab.gov.br
+    endpoints:
+      http:
+        /validar.cpf:
+          - call: sleep,512
+          - call: sleep,15000
+            probability: 0.35
+        /aux:
+          - call: sleep,512
+          - call: sleep,5000
+            schedule: "* */2 * * * * *"
+            probability: 0.10
+
+  ConsultarProcesso:
+    type: java
+    agent: yes
+    endpoints:
+      http:
+        /consultar.processo:
+          - call: slow,512
+          - sql://BackendBD/pje?query=SELECT titulo, descricao, juiz, advogado, valor, email, usuario FROM Processos;SELECT SLEEP(500/1000);
+          - http://wwwh.cnj.jus.br/aux
+          - call: http://www.oab.gov.br/aux
+            probability: 0.50
+
+  ExecutarProcesso:
+    type: java
+    agent: yes
+    endpoints:
+      http:
+        /abrir.processo:
+          - call: slow,512
+          - sql://BackendBD/pje?query=INSERT INTO Processos (titulo, descricao, juiz, advogado, valor, email, usuario) VALUES ('temp', 'temp', 'temp', 'temp', 'temp', 'temp', 'temp');SELECT SLEEP(500/1000);
+          - http://sistema.spc.org.br/aux
+        /distribuir.processo:
+          - call: slow,512
+          - sql://BackendBD/pje?query=INSERT INTO Processos (titulo, descricao, juiz, advogado, valor, email, usuario) VALUES ('temp', 'temp', 'temp', 'temp', 'temp', 'temp', 'temp');SELECT SLEEP(500/1000);
+          - sql://BackendBD/pje?query=UPDATE Processos SET juiz = 'temp', advogado = 'temp' WHERE titulo = 'temp';SELECT SLEEP(800/1000);
+          - call: http://www.oab.gov.br/aux
+            probability: 0.50
+          - call: sleep,10000
+            probability: 0.10
+        /assinar.processo:
+          - call: slow,512
+          - sql://BackendBD/pje?query=INSERT INTO Processos (titulo, descricao, juiz, advogado, valor, email, usuario) VALUES ('temp', 'temp', 'temp', 'temp', 'temp', 'temp', 'temp');SELECT SLEEP(500/1000);
+          - call: slow,5000
+            probability: 0.25
+
+  MNI:
+    type: java
+    agent: yes
+    endpoints:
+      http:
+        /integracao:
+          - call: slow,512
+          - sql://BackendBD/pje?query=SELECT * FROM Processos;SELECT SLEEP(250/1000);
+          - call: slow,3000
+            probability: 0.30
+
+  BackendBD:
+    type: mysql
+    databases:
+      pje:
+        Processos:
+          [id, titulo, descricao, juiz, advogado, valor, email, usuario]
+        Usuarios: [id, nome, email, cpf]
+      quartz:
+        Schedule: [id, acao, executado]
+
+chaos:
+  pause-cdn.in-the.cloud:
+    type: pumba
+    interval: 3m
+    target: cdn.in-the.cloud
+    command: pause
+    duration: 10s
+  network-loss:
+    type: pumba
+    interval: 5m
+    target:
+      - ExecutarProcesso
+      - RemoteServices
+    command: netem-loss
+    duration: 1m
+    probability: 25
+  network-delay:
+    type: pumba
+    interval: 8m
+    target:
+      - BackendDB
+      - MNI
+      - ConsultarProcesso
+    command: netem-delay
+    duration: 30s
+    time: 5000
+
+loaders:
+  quartz:
+    type: puppeteer
+    waitstart: 60
+    wait: 10
+    count: 1
+    locations:
+      - { city: "Porto Seguro", region: "Bahia", country: "Brazil" }
+      - { city: "Salvador", region: "Bahia", country: "Brazil" }
+    urls:
+      - http://Quartz/executar
+    data:
+      - id: idQuartz
+        chance: integer
+        value: 1,1000
+      - id: executado
+        value: [0, 1]
+
+  load-simple:
+    type: puppeteer
+    waitstart: 60
+    wait: 1
+    count: 5
+    drop: 0.05
+    dropStep: 0.025
+    shuffle: true
+    devices:
+      - ""
+      - "iPhone 11 Pro Max"
+      - "Galaxy S5"
+      - "iPad Pro landscape"
+      - "iPhone 8"
+      - "Nexus 6P"
+      - "Pixel 2 XL"
+      - "Microsoft Lumia 950"
+    locations:
+      - {
+          city: "San Francisco",
+          region: "California",
+          country: "United States",
+        }
+      - { city: "Brasilia", region: "Distrito Federal", country: "Brazil" }
+      - { city: "Ipatinga", region: "Minas Gerais", country: "Brazil" }
+      - { city: "Rio de Janeiro", region: "Rio de Janeiro", country: "Brazil" }
+      - { city: "Manaus", region: "Amazonas", country: "Brazil" }
+      - { city: "Tokyo", region: "Kanto", country: "Japan" }
+      - { city: "Sapporo", region: "Hokkaido", country: "Japan" }
+      - { city: "Fedotyev", region: "Kamchatka", country: "Russian Federation" }
+      - { city: "Frankfurt", region: "Hessen", country: "Germany" }
+      - { city: "Salvador", region: "Bahia", country: "Brazil" }
+    urls:
+      - http://www.pje.appd/agendamento.audiencia
+      - http://www.pje.appd/abertura.processo
+      - http://www.pje.appd/assinar.documento
+      - http://www.pje.appd/consulta.publica
+      - http://www.pje.appd/consulta.processo
+      - http://www.pje.appd/distribuicao.processo
+      - http://www.pje.appd/download.processo
+      - [
+          http://www.pje.appd/login,
+          http://www.pje.appd/login.cpf,
+          http://www.pje.appd/login,
+        ]
+      - http://www.pje.appd/pesquisar.processo
+      - http://www.pje.appd/mmi.integracao
+    data:
+      - id: nome
+        chance: name
+      - id: email
+        chance: email
+        value: pje.org
+      - id: cpf
+        chance: cpf
+      - id: perfil
+        value: ["Advogado", "Juiz", "Cidadão", "Desembargador", "Ministro"]
+      - id: tipoConsulta
+        value: ["Privada", "Pública"]
+      - id: numeroProcesso
+        chance: integer
+        value: 1,1000
+      - id: valorProcesso
+        chance: integer
+        value: 500,25000
