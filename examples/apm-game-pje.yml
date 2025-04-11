@@ -13,6 +13,12 @@ apm:
   applicationName: PJe
   eum:
     appKey: AD-AAB-ACD-AHV
+    resTiming: { "bufSize": 200, "clearResTimingOnBeaconSend": true }
+    maxUrlLength: 512;
+    config.hannel: { bufferMode: false }
+    xhr: {"maxPerPageView":"UNLIMITED"}
+    enableCoreWebVitals: true
+    enableSpeedIndex: true
 
 services:
   WebFrontEnd:
@@ -60,12 +66,33 @@ services:
           - http://UsuariosServices/login
           - call: image,http://cdn.in-the.cloud/logo_v2.png
             probability: 0.80
+          - call: data
+            id: perfil
+            value: ["Advogado", "Juiz", "Cidadão", "Desembargador", "Ministro"]
+          - call: data
+            id: nome
+            value: ["Lucas Almeida", "Emily Johnson", "Bruna Ferreira", "James Miller", "Rafaela Costa", "Daniel Smith", "Thiago Ramos", "Olivia Brown", "Gabriela Souza", "Michael Davis", "Isabela Rocha", "Christopher Wilson", "Mariana Lima", "Benjamin Harris", "Ana Clara Mendes"]
+          - call: data
+            id: email
+            value: [ "mesa.redonda@pje.org", "cadeira.azul@pje.org", "janela.aberta@pje.org", "porta.madeira@pje.org", "luminaria.branca@pje.org", "teclado.usb@pje.org", "monitor.lcd@pje.org", "caderno.verde@pje.org", "caneta.azul@pje.org", "mochila.preta@pje.org", "garrafa.agua@pje.org", "fone.ouvido@pje.org", "mouse.pad@pje.org", "livro.digital@pje.org", "celular.cinza@pje.org" ]
         /login.cpf:
           - call: slow,512
           - http://UsuariosServices/login
           - call: image,http://cdn.in-the.cloud/logo.png
           - call: http://ldap.app/validar.cpf
             remoteTimeout: 10000
+          - call: data
+            id: perfil
+            value: ["Advogado", "Juiz", "Cidadão", "Desembargador", "Ministro"]
+          - call: data
+            id: cpf
+            value: ["383.870.458-98", "625.913.357-36", "058.427.610-71", "947.185.023-66", "394.248.985-00", "301.174.147-10", "209.588.604-70", "768.430.189-00", "853.092.370-40", "712.605.183-03", "176.093.421-00", "950.284.600-23", "674.810.932-95", "124.576.308-08", "589.307.190-44"]
+          - call: data
+            id: nome
+            value: ["Lucas Almeida", "Emily Johnson", "Bruna Ferreira", "James Miller", "Rafaela Costa", "Daniel Smith", "Thiago Ramos", "Olivia Brown", "Gabriela Souza", "Michael Davis", "Isabela Rocha", "Christopher Wilson", "Mariana Lima", "Benjamin Harris", "Ana Clara Mendes"]
+          - call: data
+            id: email
+            value: [ "mesa.redonda@pje.org", "cadeira.azul@pje.org", "janela.aberta@pje.org", "porta.madeira@pje.org", "luminaria.branca@pje.org", "teclado.usb@pje.org", "monitor.lcd@pje.org", "caderno.verde@pje.org", "caneta.azul@pje.org", "mochila.preta@pje.org", "garrafa.agua@pje.org", "fone.ouvido@pje.org", "mouse.pad@pje.org", "livro.digital@pje.org", "celular.cinza@pje.org" ]
         /mmi.integracao:
           - call: slow,512
           - http://MNI/integracao
@@ -106,6 +133,13 @@ services:
             probability: 0.10
           - call: http://www.pje.appd/quartz
             remoteTimeout: 3000
+          - call: data
+            id: idQuartz
+            type: int
+            chance: integer,min:1,max:1000
+          - call: data
+            id: executado
+            value: [0, 1]
 
   cdn.in-the.cloud:
     type: nodejs
@@ -155,6 +189,17 @@ services:
           - http://wwwh.cnj.jus.br/aux
           - call: http://www.oab.gov.br/aux
             probability: 0.50
+          - call: data
+            id: tipoConsulta
+            value: ["Privada", "Pública"]
+          - call: data
+            id: numeroProcesso
+            type: int
+            chance: integer,min:1,max:1000
+          - call: data
+            id: valorProcesso
+            type: int
+            chance: integer,min:500,max:25000
 
   ExecutarProcesso:
     type: java
@@ -230,25 +275,17 @@ chaos:
 loaders:
   quartz:
     type: puppeteer
-    waitstart: 60
-    wait: 10
+    wait: 60
     count: 1
     locations:
       - { city: "Porto Seguro", region: "Bahia", country: "Brazil" }
       - { city: "Salvador", region: "Bahia", country: "Brazil" }
     urls:
       - http://Quartz/executar
-    data:
-      - id: idQuartz
-        chance: integer
-        value: 1,1000
-      - id: executado
-        value: [0, 1]
 
   load-simple:
     type: puppeteer
-    waitstart: 60
-    wait: 1
+    wait: 60
     count: 5
     drop: 0.05
     dropStep: 0.025
@@ -292,21 +329,3 @@ loaders:
         ]
       - http://www.pje.appd/pesquisar.processo
       - http://www.pje.appd/mmi.integracao
-    data:
-      - id: nome
-        chance: name
-      - id: email
-        chance: email
-        value: pje.org
-      - id: cpf
-        chance: cpf
-      - id: perfil
-        value: ["Advogado", "Juiz", "Cidadão", "Desembargador", "Ministro"]
-      - id: tipoConsulta
-        value: ["Privada", "Pública"]
-      - id: numeroProcesso
-        chance: integer
-        value: 1,1000
-      - id: valorProcesso
-        chance: integer
-        value: 500,25000
