@@ -139,7 +139,7 @@ services:
             chance: integer,min:1,max:1000
           - call: data
             id: executado
-            value: [0, 1]
+            value: ["0", "1"]
 
   cdn.in-the.cloud:
     type: nodejs
@@ -280,13 +280,14 @@ loaders:
     locations:
       - { city: "Porto Seguro", region: "Bahia", country: "Brazil" }
       - { city: "Salvador", region: "Bahia", country: "Brazil" }
+      - { city: "Tampa", region: "Florida", country: "United States" }
     urls:
       - http://Quartz/executar
 
   load-simple:
     type: puppeteer
     wait: 60
-    count: 5
+    count: 8
     drop: 0.05
     dropStep: 0.025
     shuffle: true
@@ -300,11 +301,9 @@ loaders:
       - "Pixel 2 XL"
       - "Microsoft Lumia 950"
     locations:
-      - {
-          city: "San Francisco",
-          region: "California",
-          country: "United States",
-        }
+      - { city: "San Francisco", region: "California", country: "United States" }
+      - { city: "Toto", region: "Kansas", country: "United States" }
+      - { city: "Tampa", region: "Florida", country: "United States" }
       - { city: "Brasilia", region: "Distrito Federal", country: "Brazil" }
       - { city: "Ipatinga", region: "Minas Gerais", country: "Brazil" }
       - { city: "Rio de Janeiro", region: "Rio de Janeiro", country: "Brazil" }
@@ -314,6 +313,7 @@ loaders:
       - { city: "Fedotyev", region: "Kamchatka", country: "Russian Federation" }
       - { city: "Frankfurt", region: "Hessen", country: "Germany" }
       - { city: "Salvador", region: "Bahia", country: "Brazil" }
+      - { city: "Sao Paulo", region: "Sao Paulo", country: "Brazil" }
     urls:
       - http://www.pje.appd/agendamento.audiencia
       - http://www.pje.appd/abertura.processo
